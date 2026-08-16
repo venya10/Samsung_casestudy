@@ -223,7 +223,12 @@
       return list.map(function (r) { return { label: mktLabel(r), fval: r.market, value: r[valueKey] }; });
     }
 
-    var effSales = eff.slice().sort(function (a, b) { return b.sales_aed - a.sales_aed; });
+    // TV and PR carry no sales data at all (not zero -- never tracked), so they
+    // drop out of the sales breakdown the same way they already drop out of
+    // every ROAS ranking (see `measurable` below); spend is real for both, so
+    // the spend breakdown keeps every channel.
+    var effSales = eff.filter(function (r) { return r.sales_aed !== null && r.sales_aed !== undefined; })
+      .slice().sort(function (a, b) { return b.sales_aed - a.sales_aed; });
     var effSpend = eff.slice().sort(function (a, b) { return b.spend_aed - a.spend_aed; });
     var msSales = ms.slice().sort(function (a, b) { return b.sales_aed - a.sales_aed; });
     var msSpend = ms.slice().sort(function (a, b) { return b.spend_aed - a.spend_aed; });

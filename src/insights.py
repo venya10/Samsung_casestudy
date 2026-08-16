@@ -57,13 +57,23 @@ def load_tables() -> dict[str, pd.DataFrame]:
 # 1. Channel efficiency
 # --------------------------------------------------------------------------
 def channel_efficiency(chan: pd.DataFrame) -> pd.DataFrame:
+    # min_count=1 on every summed column: pandas' plain .sum() reduces an
+    # all-NaN group to 0.0, not NaN -- so without this, TV/PR's sales_aed and
+    # conversions (never tracked at all, not merely zero) came out as a literal
+    # 0 instead of "no data". That silently re-introduces exactly the "TV
+    # scored as zero-performing" mistake the rest of this file goes out of its
+    # way to avoid (see the revenue_attributed masking below). spend_aed stays
+    # correct either way since TV/PR's spend values are real, not NaN.
+    def _sum(s):
+        return s.sum(min_count=1)
+
     g = chan.groupby("channel", as_index=False).agg(
-        spend_aed=("spend_aed", "sum"),
-        sales_aed=("sales_aed", "sum"),
-        conversions=("conversions", "sum"),
-        impressions=("impressions", "sum"),
-        clicks=("clicks", "sum"),
-        tv_grp=("tv_grp", "sum"),
+        spend_aed=("spend_aed", _sum),
+        sales_aed=("sales_aed", _sum),
+        conversions=("conversions", _sum),
+        impressions=("impressions", _sum),
+        clicks=("clicks", _sum),
+        tv_grp=("tv_grp", _sum),
         media_type=("media_type", "first"),
         channel_role=("channel_role", "first"),
         revenue_attributed=("revenue_attributed", "first"),

@@ -374,6 +374,12 @@ def ask(question: str, history: list[dict] | None = None, verbose: bool = False)
         system_instruction=build_system_prompt(),
         tools=[types.Tool(function_declarations=TOOLS)],
         max_output_tokens=MAX_TOKENS,
+        # Low, not zero: this is a fact-lookup-and-explain task, not creative
+        # writing, and the default temperature measurably increased the odds
+        # of a supporting figure (e.g. TV's cost per GRP) getting misquoted
+        # from "close enough" memory instead of the tool result actually in
+        # front of it. A live audit caught this at the default temperature.
+        temperature=0.2,
     )
 
     for _ in range(MAX_TURNS):
@@ -565,6 +571,7 @@ def ask_page_insights(active: dict) -> dict:
             config=types.GenerateContentConfig(
                 max_output_tokens=MAX_TOKENS,
                 response_mime_type="application/json",
+                temperature=0.2,
             ),
         )
     except genai_errors.ClientError as exc:

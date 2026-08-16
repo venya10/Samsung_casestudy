@@ -1,6 +1,6 @@
 channel,spend_aed,sales_aed,conversions,impressions,clicks,tv_grp,media_type,channel_role,revenue_attributed,roas,roi_gross_margin,cpa_aed,cpm_aed,cpc_aed,aov_aed,cost_per_grp_aed,share_of_spend,share_of_sales,efficiency_index,payback,action,spend_change_aed,sales_impact_aed,margin_impact_aed
-Search,"4,505,433","105,319,441","261,430","119,121,678","2,026,322",0,paid,response,True,23.38,5.14,17.23,37.82,2.22,402.86,,0.19,0.43,2.29,profitable on margin,INCREASE,"239,983.96","5,609,888.34","1,234,175.43"
-Retail,"329,117","3,993,587","9,927","2,080,986",0,0,paid,response,True,12.13,2.67,33.15,158.15,,402.30,,0.01,0.02,1.19,profitable on margin,INCREASE,"124,572.74","1,511,596.46","332,551.22"
-Paid Social,"5,323,215","46,224,013","166,499","179,273,938","2,050,813",0,paid,response,True,8.68,1.91,31.97,29.69,2.60,277.62,,0.22,0.19,0.85,profitable on margin,HOLD,0,0,0
-B2B Roadshow,"875,046","3,710,702","9,705","1,927,409",0,0,paid,brand,True,4.24,0.93,90.16,454.00,,382.35,,0.04,0.02,0.42,below breakeven on margin,REDUCE,"-131,256.90","-556,605.30","-122,453.17"
-Influencer,"1,555,332","3,243,013","9,334",0,0,0,paid,response,True,2.09,0.46,166.63,,,347.44,,0.06,0.01,0.20,below breakeven on margin,REDUCE,"-233,299.80","-486,451.95","-107,019.43"
+Search,"4,505,433","105,319,441","261,430","119,121,678","2,026,322",,paid,response,True,23.38,5.14,17.23,37.82,2.22,402.86,,0.19,0.43,2.29,profitable on margin,INCREASE,"239,983.96","5,609,888.34","1,234,175.43"
+Retail,"329,117","3,993,587","9,927","2,080,986",,,paid,response,True,12.13,2.67,33.15,158.15,,402.30,,0.01,0.02,1.19,profitable on margin,INCREASE,"124,572.74","1,511,596.46","332,551.22"
+Paid Social,"5,323,215","46,224,013","166,499","179,273,938","2,050,813",,paid,response,True,8.68,1.91,31.97,29.69,2.60,277.62,,0.22,0.19,0.85,profitable on margin,HOLD,0,0,0
+B2B Roadshow,"875,046","3,710,702","9,705","1,927,409",,,paid,brand,True,4.24,0.93,90.16,454.00,,382.35,,0.04,0.02,0.42,below breakeven on margin,REDUCE,"-131,256.90","-556,605.30","-122,453.17"
+Influencer,"1,555,332","3,243,013","9,334",,,,paid,response,True,2.09,0.46,166.63,,,347.44,,0.06,0.01,0.20,below breakeven on margin,REDUCE,"-233,299.80","-486,451.95","-107,019.43"

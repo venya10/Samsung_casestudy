@@ -1,9 +1,9 @@
 channel,spend_aed,sales_aed,conversions,impressions,clicks,tv_grp,media_type,channel_role,revenue_attributed,roas,roi_gross_margin,cpa_aed,cpm_aed,cpc_aed,aov_aed,cost_per_grp_aed,share_of_spend,share_of_sales,efficiency_index,payback
-TV,"11,645,683",0,0,0,0,"149,094",paid,brand,False,,,,,,,78.11,0.48,0,,not measurable from this data
-Paid Social,"5,323,215","46,224,013","166,499","179,273,938","2,050,813",0,paid,response,True,8.68,1.91,31.97,29.69,2.60,277.62,,0.22,0.19,0.85,profitable on margin
-Search,"4,505,433","105,319,441","261,430","119,121,678","2,026,322",0,paid,response,True,23.38,5.14,17.23,37.82,2.22,402.86,,0.19,0.43,2.29,profitable on margin
-Influencer,"1,555,332","3,243,013","9,334",0,0,0,paid,response,True,2.09,0.46,166.63,,,347.44,,0.06,0.01,0.20,below breakeven on margin
-B2B Roadshow,"875,046","3,710,702","9,705","1,927,409",0,0,paid,brand,True,4.24,0.93,90.16,454.00,,382.35,,0.04,0.02,0.42,below breakeven on margin
-Retail,"329,117","3,993,587","9,927","2,080,986",0,0,paid,response,True,12.13,2.67,33.15,158.15,,402.30,,0.01,0.02,1.19,profitable on margin
-PR,0,0,0,0,0,0,earned,brand,False,,,,,,,,0,0,,not measurable from this data
-Website,0,"84,798,649","262,333",0,0,0,earned,owned,True,,,,,,323.25,,0,0.34,,no media cost — earned
+TV,"11,645,683",,,,,"149,094",paid,brand,False,,,,,,,78.11,0.48,,,not measurable from this data
+Paid Social,"5,323,215","46,224,013","166,499","179,273,938","2,050,813",,paid,response,True,8.68,1.91,31.97,29.69,2.60,277.62,,0.22,0.19,0.85,profitable on margin
+Search,"4,505,433","105,319,441","261,430","119,121,678","2,026,322",,paid,response,True,23.38,5.14,17.23,37.82,2.22,402.86,,0.19,0.43,2.29,profitable on margin
+Influencer,"1,555,332","3,243,013","9,334",,,,paid,response,True,2.09,0.46,166.63,,,347.44,,0.06,0.01,0.20,below breakeven on margin
+B2B Roadshow,"875,046","3,710,702","9,705","1,927,409",,,paid,brand,True,4.24,0.93,90.16,454.00,,382.35,,0.04,0.02,0.42,below breakeven on margin
+Retail,"329,117","3,993,587","9,927","2,080,986",,,paid,response,True,12.13,2.67,33.15,158.15,,402.30,,0.01,0.02,1.19,profitable on margin
+PR,0,,,,,,earned,brand,False,,,,,,,,0,,,not measurable from this data
+Website,,"84,798,649","262,333",,,,earned,owned,True,,,,,,323.25,,,0.34,,no media cost — earned

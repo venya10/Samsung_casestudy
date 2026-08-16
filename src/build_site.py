@@ -515,7 +515,11 @@ def page_overview(d: dict) -> str:
         s = df.sort_values(col, ascending=False)
         return _rows([market_label(mk) for mk in s["market"]], s[col], s["market"])
 
-    eff_sales = eff.sort_values("sales_aed", ascending=False)
+    # TV and PR carry no sales data at all (not zero -- never tracked), so they
+    # drop out of the sales breakdown the same way they already drop out of
+    # every ROAS ranking; spend is real for both, so the spend breakdown keeps
+    # every channel.
+    eff_sales = eff[eff["sales_aed"].notna()].sort_values("sales_aed", ascending=False)
     eff_spend = eff.sort_values("spend_aed", ascending=False)
     ps_sales = ps.sort_values("sales_aed", ascending=False)
     ps_spend = ps.sort_values("spend_aed", ascending=False)
@@ -844,6 +848,10 @@ def page_channels(d: dict) -> str:
             label="View channel economics",
         ),
     ) + "</div>")
+    body.append(note(
+        f"“roi_gross_margin” applies an illustrative {GROSS_MARGIN:.0%} blended "
+        "gross margin to ROAS, not a figure Finance has confirmed — treat it as "
+        "directional until the real margin is supplied."))
 
     # --- channel detail: click a slice (or a legend entry) to drill in ----
     channel_list = pie_src["channel"].tolist()
@@ -1013,6 +1021,11 @@ def page_influencers(d: dict) -> str:
     body = [
         head("Influencer performance", "Influencer Performance", "influencers", kpis_html=inf_kpis_html),
     ]
+    body.append(note(
+        f"“Best on margin” applies an illustrative {GROSS_MARGIN:.0%} blended "
+        "gross margin to ROAS — not a figure Finance has confirmed. Even the best "
+        f"performer clears only {best_margin:,.2f}x on that basis; treat this as "
+        "directional until the real margin is supplied."))
 
     # --- influencer comparison: one metric at a time, switchable ---------
     # X axis is every influencer (just its number); Y axis is whichever
