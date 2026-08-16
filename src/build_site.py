@@ -228,7 +228,7 @@ def shell(active: str, title: str, body: str, period: str, *,
 </main>
 <footer><div class="footer-inner">
   <span>Samsung MENA Marketing Intelligence · generated from the weekly pipeline</span>
-  <span>All figures in AED · 8 weeks · 8 markets · 8 channels · 6 products</span>
+  <span>All figures in AED · {period} · 8 markets · 8 channels · 6 products</span>
 </div></footer>
 </div>
 </div>
@@ -450,9 +450,6 @@ def table_view(df: pd.DataFrame, formats: dict | None = None,
             f"{table(df, formats)}</details>")
 
 
-WK = [f"Wk {i}" for i in range(1, 9)]
-
-
 def _wow(vals: list[float]) -> float | None:
     """First half of the series vs the second half -- the one definition of
     week-over-week movement this project uses, shared by every page that
@@ -598,7 +595,7 @@ def page_overview(d: dict) -> str:
                             [total_spend - tv["spend_aed"], tv["spend_aed"]])
 
     ov_data = {
-        "weeks": WK,
+        "weeks": d["wk_labels"],
         "trend": {"sales": sales_trend, "spend": spend_trend, "mer": mer_trend,
                   "earned_share": earned_trend, "unmeasured_share": tv_share_trend},
         "breakdown": breakdown,
@@ -635,7 +632,7 @@ def page_overview(d: dict) -> str:
                               center_label=center_label, center_sub=center_sub)
 
     def _ov_line(values: list[float], v_fmt, color: str, chart_id: str) -> str:
-        return C.line_chart(WK, [C.Series("", values, color)], y_fmt=v_fmt,
+        return C.line_chart(d["wk_labels"], [C.Series("", values, color)], y_fmt=v_fmt,
                              hover_fmt=v_fmt, chart_id=chart_id)
 
     ov_kpis_html = '<div id="mount-kpis">' + kpis([
@@ -905,7 +902,7 @@ def page_portfolio(d: dict) -> str:
     # --- weekly sales across markets + product-by-market split, side by --
     # side -- pastel, one colour per market, shared between both charts.
     wm_piv = (spine.pivot(index="week", columns="market", values="sales_aed")
-              .reindex(range(1, 9)).fillna(0))
+              .reindex(d["weeks"]).fillna(0))
     wm_piv = wm_piv[wm_piv.sum().sort_values(ascending=False).index]
     market_order = wm_piv.columns.tolist()
     market_colors = {mk: C.SERIES_PASTEL[i % len(C.SERIES_PASTEL)]
@@ -935,7 +932,7 @@ def page_portfolio(d: dict) -> str:
             "Sales by week across markets",
             "Click a line, a point, or the legend to filter",
             market_legend
-            + C.line_chart(WK, sales_by_market, y_fmt=aed_short, hover_fmt=aed,
+            + C.line_chart(d["wk_labels"], sales_by_market, y_fmt=aed_short, hover_fmt=aed,
                            filter_dim="market", chart_id="pf-sales-week"),
             table_view(wm_piv.reset_index(), {c: aed_short for c in wm_piv.columns}),
         ) + "</div>"
@@ -1144,7 +1141,7 @@ def page_brand(d: dict) -> str:
             "Brand awareness & purchase intent over week",
             "Group average, indicative index",
             C.legend([("Awareness", C.SERIES_PASTEL[0]), ("Purchase intent", C.SERIES_PASTEL[1])])
-            + C.line_chart(WK, [
+            + C.line_chart(d["wk_labels"], [
                 C.Series("Awareness", wk["brand_awareness"].tolist(), C.SERIES_PASTEL[0]),
                 C.Series("Purchase intent", wk["purchase_intent"].tolist(), C.SERIES_PASTEL[1]),
             ], y_fmt=lambda v: f"{v:,.0f}", chart_id="br-wk"),
@@ -1242,7 +1239,7 @@ def page_alerts(d: dict) -> str:
         kpi("Critical", str(counts.get("critical", 0))),
         kpi("High", str(counts.get("high", 0))),
         kpi("Medium", str(counts.get("medium", 0))),
-        kpi("Fired across 8 weeks", str(len(alerts))),
+        kpi(f"Fired across {len(d['weeks'])} weeks", str(len(alerts))),
     ]) + '</div>'
 
     body = [
@@ -1286,17 +1283,17 @@ def page_alerts(d: dict) -> str:
     body.append('<div id="mount-ew-history">')
     if not dated.empty:
         piv = (dated.groupby(["week", "severity"]).size().unstack(fill_value=0)
-               .reindex(range(1, 9), fill_value=0))
+               .reindex(d["weeks"], fill_value=0))
         for s in ["critical", "high", "medium"]:
             if s not in piv.columns:
                 piv[s] = 0
         body.append("<h2>What the rules would have caught</h2>")
         body.append(card(
-            "Alerts fired per week", "Back-tested across all 8 weeks",
+            "Alerts fired per week", f"Back-tested across all {len(d['weeks'])} weeks",
             C.legend([("Critical", sev_color_pastel["critical"]), ("High", sev_color_pastel["high"]),
                       ("Medium", sev_color_pastel["medium"])], symbol="dot")
             + C.stacked_columns(
-                WK,
+                d["wk_labels"],
                 [("Critical", piv["critical"].tolist(), sev_color_pastel["critical"]),
                  ("High", piv["high"].tolist(), sev_color_pastel["high"]),
                  ("Medium", piv["medium"].tolist(), sev_color_pastel["medium"])],
@@ -1693,7 +1690,15 @@ def build() -> None:
     src = pd.read_csv(SOURCE_FILE) if SOURCE_FILE.exists() else None
     if src is not None:
         d["raw_shape"] = {"rows": len(src), "cols": len(src.columns)}
-    period = "8 weeks"
+
+    # The week axis every trend chart plots against, derived from the actual
+    # data rather than assumed -- this dataset started as a fixed 8-week
+    # extract, but the Data page's upload can now merge in more weeks, and a
+    # chart built for exactly 8 labels would throw an IndexError the moment a
+    # 9th week showed up (it did, in testing, before this existed).
+    d["weeks"] = sorted(int(w) for w in d["spine"]["week"].dropna().unique())
+    d["wk_labels"] = [f"Wk {w}" for w in d["weeks"]]
+    period = f"{len(d['weeks'])} week{'s' if len(d['weeks']) != 1 else ''}"
 
     crit_count = int((d["alerts_current"]["severity"] == "critical").sum())
     # Two independently-aggregated tables -- the market-week spine and the
