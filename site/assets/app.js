@@ -345,3 +345,77 @@
     chip.addEventListener('click', function () { ask(chip.textContent); });
   });
 })();
+
+/* -------------------------------------------------------- data upload */
+// Separate top-level IIFE, not folded into the one above -- that one exits
+// early via `if (!log) return;` on any page without the chat log (i.e.
+// every page except assistant.html), which would skip this too if it were
+// appended inside instead of after.
+(function () {
+  'use strict';
+  var mount = document.getElementById('mount-upload');
+  if (!mount) return;
+
+  var passInput = document.getElementById('upload-passcode');
+  var fileInput = document.getElementById('upload-file');
+  var btn = document.getElementById('upload-btn');
+  var note = document.getElementById('upload-note');
+
+  function setNote(text, cls) {
+    note.className = 'fbar-note' + (cls ? ' ' + cls : '');
+    note.textContent = text;
+  }
+
+  function disableWith(message) {
+    btn.disabled = true; passInput.disabled = true; fileInput.disabled = true;
+    note.className = 'fbar-note';
+    note.innerHTML = '<span class="fbar-offline">' + message + '</span>';
+  }
+
+  function checkEnabled() {
+    fetch('/api/health').then(function (r) {
+      if (!r.ok) throw new Error('unreachable');
+      return r.json();
+    }).then(function (j) {
+      if (!j.upload_enabled) {
+        disableWith('Uploads are disabled on this server (no UPLOAD_PASSCODE configured).');
+      }
+    }).catch(function () {
+      disableWith('Offline — run <code>python src/serve.py</code> to enable uploads.');
+    });
+  }
+  checkEnabled();
+
+  btn.addEventListener('click', function () {
+    var file = fileInput.files[0];
+    var passcode = passInput.value;
+    if (!file) { setNote('Choose a file first.', 'fbar-error'); return; }
+    if (!passcode) { setNote('Enter the upload passcode.', 'fbar-error'); return; }
+
+    btn.disabled = true;
+    setNote('Uploading and rebuilding the dashboard — this can take a few seconds…');
+    fetch('/api/upload-data', {
+      method: 'POST',
+      headers: {
+        'X-Upload-Passcode': passcode,
+        'X-Filename': file.name,
+        'Content-Type': 'application/octet-stream'
+      },
+      body: file
+    }).then(function (r) { return r.json().then(function (j) { return { status: r.status, body: j }; }); })
+      .then(function (res) {
+        if (!res.body.ok) {
+          setNote(res.body.error || 'Upload failed.', 'fbar-error');
+          btn.disabled = false;
+          return;
+        }
+        setNote('Rebuilt from ' + res.body.rows.toLocaleString() + ' rows across ' +
+          res.body.weeks.length + ' week(s). Reloading…');
+        setTimeout(function () { window.location.reload(); }, 1200);
+      })
+      .catch(function (err) {
+        setNote("Couldn't reach the server: " + err.message, 'fbar-error');
+        btn.disabled = false;
+      });
+  });
+})();

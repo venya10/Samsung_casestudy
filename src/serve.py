@@ -6,11 +6,13 @@ Uses only the standard library's http.server -- no Flask, no extra dependency.
 The site itself is static and works by double-clicking `site/index.html`; this
 server exists solely to add the API routes the interactive pages call:
 
-    GET  /api/health   ->  {"live": true|false}
-    POST /api/ask      ->  {"answer_html": ..., "tool_calls": [...]}
-    POST /api/tables   ->  the live filter bar's recomputed tables
-    POST /api/alerts   ->  {"alerts": [...], "alerts_current": [...]} at a
-                            custom sensitivity -- the Early Warning page's slider
+    GET  /api/health       ->  {"live": true|false}
+    POST /api/ask          ->  {"answer_html": ..., "tool_calls": [...]}
+    POST /api/tables       ->  the live filter bar's recomputed tables
+    POST /api/alerts       ->  {"alerts": [...], "alerts_current": [...]} at a
+                                custom sensitivity -- the Early Warning page's slider
+    POST /api/upload-data  ->  replace the dataset and rebuild everything --
+                                the Data page's upload button, passcode-gated
 
 If no API key is set the health route reports live=false and the page falls back
 to the prepared answers baked into the HTML, saying so on screen.
@@ -21,6 +23,7 @@ import json
 import os
 import re
 import sys
+import threading
 import webbrowser
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -30,6 +33,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import alerts  # noqa: E402
 import assistant  # noqa: E402
+import data_upload  # noqa: E402
 import site_data  # noqa: E402
 from common import ROOT  # noqa: E402
 
@@ -38,6 +42,18 @@ SITE = ROOT / "site"
 # locally (no $PORT set) this falls back to the same 127.0.0.1:8000 as before.
 PORT = int(os.environ.get("PORT", 8000))
 HOST = "0.0.0.0" if "PORT" in os.environ else "127.0.0.1"
+
+# Unset by default -- the Data page's upload button is disabled with an
+# explanatory note unless this is configured, so a public deploy can't have
+# its live dataset replaced by anyone with the URL. Same env-var pattern as
+# GEMINI_API_KEY.
+UPLOAD_PASSCODE = os.environ.get("UPLOAD_PASSCODE")
+
+# The pipeline mutates shared state on disk (data/raw, data/processed, site/)
+# and module-level singletons (ingest.DQ, validate_site's failure counters) --
+# ThreadingHTTPServer runs each request on its own thread, so two uploads
+# arriving at once could interleave and corrupt either. One at a time.
+_upload_lock = threading.Lock()
 
 # Tables the filter API sends to the client. GLOBAL_ONLY ones are always the
 # full, unfiltered table -- see site_data.py for why (panel_model, market peer
@@ -153,7 +169,8 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_GET(self):  # noqa: N802
         if self.path.split("?")[0] == "/api/health":
-            self._json({"live": assistant.has_api_key(), "model": assistant.MODEL})
+            self._json({"live": assistant.has_api_key(), "model": assistant.MODEL,
+                        "upload_enabled": bool(UPLOAD_PASSCODE)})
             return
         super().do_GET()
 
@@ -167,6 +184,8 @@ class Handler(SimpleHTTPRequestHandler):
             self._handle_alerts()
         elif path == "/api/insights":
             self._handle_insights()
+        elif path == "/api/upload-data":
+            self._handle_upload_data()
         else:
             self.send_error(404)
 
@@ -218,6 +237,46 @@ class Handler(SimpleHTTPRequestHandler):
             self._json(assistant.ask_page_insights(active))
         except Exception as exc:
             self._json({"error": str(exc)}, 500)
+
+    def _handle_upload_data(self) -> None:
+        """The Data page's "Replace the dataset" button. Not a form post --
+        the client sends the raw file bytes as the body (no multipart parsing
+        needed since we control both ends), with the passcode and original
+        filename in headers:
+
+            X-Upload-Passcode: <passcode>
+            X-Filename: <original name, e.g. mydata.xlsx>
+
+        Body: raw file bytes.
+        """
+        if not UPLOAD_PASSCODE:
+            self._json({"ok": False,
+                        "error": "Uploads are disabled on this server (no UPLOAD_PASSCODE set)."},
+                       403)
+            return
+        if self.headers.get("X-Upload-Passcode") != UPLOAD_PASSCODE:
+            self._json({"ok": False, "error": "Wrong passcode."}, 401)
+            return
+
+        length = int(self.headers.get("Content-Length", 0))
+        if length <= 0 or length > data_upload.MAX_BYTES:
+            self._json({"ok": False, "error": "Missing file or file too large (25MB limit)."}, 413)
+            return
+        body = self.rfile.read(length)
+        filename = self.headers.get("X-Filename", "upload.csv")
+
+        if not _upload_lock.acquire(blocking=False):
+            self._json({"ok": False, "error": "Another upload is already in progress. Try again shortly."}, 409)
+            return
+        try:
+            result = data_upload.apply_upload(body, filename)
+            self._json({"ok": True, **result})
+        except data_upload.UploadRejected as exc:
+            self._json({"ok": False, "error": str(exc)}, 400)
+        except Exception as exc:
+            self._json({"ok": False, "error": f"Unexpected error: {type(exc).__name__}: {exc}"}, 500)
+        finally:
+            _upload_lock.release()
 
     def _handle_alerts(self) -> None:
         """Recompute alerts with a manager-adjustable sensitivity -- the

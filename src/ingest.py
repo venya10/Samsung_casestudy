@@ -251,6 +251,14 @@ def _check_brand_grain(df: pd.DataFrame) -> None:
 
 # --------------------------------------------------------------------------
 def load() -> pd.DataFrame:
+    # DQ is a module-level singleton so model.py can append to it across
+    # load_raw()/clean() with nothing threaded through every call. A one-shot
+    # `python src/run_all.py` process never noticed it wasn't reset -- a
+    # fresh process means a fresh empty log every time. A long-lived server
+    # process that re-runs the pipeline (the Data page's dataset upload)
+    # would otherwise keep appending to the same list forever, silently
+    # duplicating every entry on the second run.
+    DQ.entries.clear()
     return clean(load_raw())
 
 

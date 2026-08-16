@@ -1391,6 +1391,29 @@ def page_data(d: dict) -> str:
              "with only its own measures populated. Nothing was imputed."),
     ]
 
+    # --- replace the dataset -----------------------------------------------
+    # Live-only, passcode-gated (see src/serve.py) -- a public deploy can't
+    # have this button usable by anyone with the URL. Requires a .csv/.xlsx
+    # with the exact same headers as the original extract; src/data_upload.py
+    # validates, swaps it in, and re-runs the full pipeline, rolling back
+    # automatically if anything fails so a bad file can never break the live
+    # site.
+    body.append(
+        '<div id="mount-upload" class="card" style="margin-top:22px">'
+        '<div class="card-head"><h3>Replace the dataset</h3>'
+        '<div class="card-sub">Upload a .csv or .xlsx with the same headers as '
+        "the original extract to rebuild the entire dashboard from it. "
+        "Requires <code>python src/serve.py</code> and the server's upload "
+        "passcode.</div></div>"
+        '<div class="sens-row">'
+        '<input type="password" id="upload-passcode" placeholder="Upload passcode" autocomplete="off">'
+        '<input type="file" id="upload-file" accept=".csv,.xlsx,.xls">'
+        '<button type="button" id="upload-btn" class="btn-dl">↑ Upload &amp; rebuild</button>'
+        "</div>"
+        '<div class="fbar-note" id="upload-note"></div>'
+        "</div>"
+    )
+
     # --- the data: tabs + download, first and up top ---------------------
     # Only the 6 fact tables -- the cleaned data itself. Business names
     # (Master Table, Channels, ...), not the internal fact_ prefix. Columns

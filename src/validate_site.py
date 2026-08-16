@@ -30,6 +30,14 @@ def check(cond: bool, msg: str) -> None:
 
 
 def main() -> None:
+    # Module-level accumulators: a one-shot `python src/validate_site.py`
+    # process never noticed these weren't reset -- a fresh process means a
+    # fresh empty list every time. A long-lived server process that re-runs
+    # the pipeline (the Data page's dataset upload) would otherwise keep
+    # every previous run's failures too, and double-count `checks`.
+    global failures, checks
+    failures, checks = [], 0
+
     if not SITE.exists():
         raise SystemExit("site/ not found — run `python src/build_site.py` first.")
 
@@ -98,9 +106,17 @@ def main() -> None:
     for f in failures:
         print(f"  FAIL  {f}")
     if failures:
-        sys.exit(1)
+        # A normal exception, not sys.exit(1): main() is also called
+        # in-process by data_upload.py, where SystemExit would bypass an
+        # `except Exception` rollback handler and kill the whole server.
+        # The CLI entry point below still turns this into exit code 1.
+        raise RuntimeError(f"{len(failures)} validation check(s) failed")
     print("\nSite is good. Open site/index.html, or run `python src/serve.py`.")
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except RuntimeError as exc:
+        print(f"\n{exc}")
+        sys.exit(1)

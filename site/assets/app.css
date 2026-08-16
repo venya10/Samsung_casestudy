@@ -531,6 +531,14 @@ button.btn-dl:disabled { opacity: .5; cursor: default; }
 .sens-value { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--ink); min-width: 34px; }
 #tbl-meta { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
 
+#mount-upload input[type="password"] {
+  font-family: var(--sans); font-size: 13px; padding: 8px 12px;
+  border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface);
+  color: var(--ink); outline: none; min-width: 170px;
+}
+#mount-upload input[type="password"]:focus { border-color: var(--blue-2); }
+#mount-upload input[type="file"] { font-family: var(--sans); font-size: 12.5px; color: var(--ink-2); max-width: 220px; }
+
 #tbl-host { overflow: auto; max-height: 560px; border-radius: var(--r-sm); border: 1px solid var(--line); box-shadow: none; }
 #tbl-host table { font-size: 12.3px; }
 #tbl-host thead th { position: sticky; top: 0; z-index: 2; cursor: pointer; user-select: none; box-shadow: inset 0 -1px 0 var(--line); }
