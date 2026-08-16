@@ -1,0 +1,24 @@
+# Secrets — never commit
+.env
+archive/streamlit-app-2/.streamlit/secrets.toml
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.pytest_cache/
+
+# Power BI local artefacts (archive/powerbi/)
+archive/powerbi/**/.pbi/
+archive/powerbi/**/cache.abf
+*.pbix
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Generated data is reproducible from src/run_all.py in ~4 seconds.
+# Uncomment to keep the repo lean; left tracked here so a reviewer can open the
+# dashboard without running anything first.
+# data/processed/

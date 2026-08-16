@@ -1,0 +1,68 @@
+table fact_product
+
+	column week
+		dataType: int64
+		summarizeBy: none
+		sourceColumn: week
+
+	column market
+		dataType: string
+		summarizeBy: none
+		sourceColumn: market
+
+	column product
+		dataType: string
+		summarizeBy: none
+		sourceColumn: product
+
+	column spend_aed
+		dataType: double
+		summarizeBy: sum
+		sourceColumn: spend_aed
+
+	column conversions
+		dataType: double
+		summarizeBy: sum
+		sourceColumn: conversions
+
+	column sales_aed
+		dataType: double
+		summarizeBy: sum
+		sourceColumn: sales_aed
+
+	column impressions
+		dataType: double
+		summarizeBy: sum
+		sourceColumn: impressions
+
+	column channels_active
+		dataType: int64
+		summarizeBy: sum
+		sourceColumn: channels_active
+
+	column roas
+		dataType: double
+		summarizeBy: sum
+		sourceColumn: roas
+
+	column aov_aed
+		dataType: double
+		summarizeBy: sum
+		sourceColumn: aov_aed
+
+	column cpa_aed
+		dataType: double
+		summarizeBy: sum
+		sourceColumn: cpa_aed
+
+	partition fact_product = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents(DataFolder & "fact_product.csv"),[Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+				    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+				    Typed = Table.TransformColumnTypes(Promoted, {{"week", Int64.Type}, {"market", type text}, {"product", type text}, {"spend_aed", type number}, {"conversions", type number}, {"sales_aed", type number}, {"impressions", type number}, {"channels_active", Int64.Type}, {"roas", type number}, {"aov_aed", type number}, {"cpa_aed", type number}})
+				in
+				    Typed
+
+	annotation PBI_ResultType = Table

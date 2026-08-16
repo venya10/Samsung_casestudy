@@ -1,0 +1,33 @@
+table dim_channel
+
+	column channel
+		dataType: string
+		summarizeBy: none
+		sourceColumn: channel
+
+	column media_type
+		dataType: string
+		summarizeBy: none
+		sourceColumn: media_type
+
+	column channel_role
+		dataType: string
+		summarizeBy: none
+		sourceColumn: channel_role
+
+	column revenue_attributed
+		dataType: boolean
+		summarizeBy: sum
+		sourceColumn: revenue_attributed
+
+	partition dim_channel = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents(DataFolder & "dim_channel.csv"),[Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+				    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+				    Typed = Table.TransformColumnTypes(Promoted, {{"channel", type text}, {"media_type", type text}, {"channel_role", type text}, {"revenue_attributed", type logical}})
+				in
+				    Typed
+
+	annotation PBI_ResultType = Table

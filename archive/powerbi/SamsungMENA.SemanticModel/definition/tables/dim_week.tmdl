@@ -1,0 +1,23 @@
+table dim_week
+
+	column week
+		dataType: int64
+		summarizeBy: none
+		sourceColumn: week
+
+	column week_label
+		dataType: string
+		summarizeBy: none
+		sourceColumn: week_label
+
+	partition dim_week = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents(DataFolder & "dim_week.csv"),[Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+				    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+				    Typed = Table.TransformColumnTypes(Promoted, {{"week", Int64.Type}, {"week_label", type text}})
+				in
+				    Typed
+
+	annotation PBI_ResultType = Table

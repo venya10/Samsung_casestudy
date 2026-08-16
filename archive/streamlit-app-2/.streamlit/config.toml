@@ -1,0 +1,20 @@
+# The app ships a fixed light design system (see app/theme.py). Without this the
+# app would inherit the viewer's OS dark mode and render dark text tokens against
+# the light surfaces the CSS paints.
+[theme]
+base = "light"
+primaryColor = "#1428A0"
+backgroundColor = "#f7f7f5"
+secondaryBackgroundColor = "#ffffff"
+textColor = "#0b0b0b"
+font = "sans serif"
+
+[client]
+toolbarMode = "minimal"
+showErrorDetails = true
+
+[server]
+runOnSave = true
+
+[browser]
+gatherUsageStats = false

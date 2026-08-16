@@ -1,0 +1,73 @@
+table fact_brand
+
+	column week
+		dataType: int64
+		summarizeBy: none
+		sourceColumn: week
+
+	column market
+		dataType: string
+		summarizeBy: none
+		sourceColumn: market
+
+	column brand_awareness
+		dataType: double
+		summarizeBy: sum
+		sourceColumn: brand_awareness
+
+	column brand_awareness_sd
+		dataType: double
+		summarizeBy: sum
+		sourceColumn: brand_awareness_sd
+
+	column purchase_intent
+		dataType: double
+		summarizeBy: sum
+		sourceColumn: purchase_intent
+
+	column purchase_intent_sd
+		dataType: double
+		summarizeBy: sum
+		sourceColumn: purchase_intent_sd
+
+	column competitor_sov
+		dataType: double
+		summarizeBy: sum
+		sourceColumn: competitor_sov
+
+	column sentiment
+		dataType: double
+		summarizeBy: sum
+		sourceColumn: sentiment
+
+	column sentiment_sd
+		dataType: double
+		summarizeBy: sum
+		sourceColumn: sentiment_sd
+
+	column n_observations
+		dataType: int64
+		summarizeBy: sum
+		sourceColumn: n_observations
+
+	column is_indicative
+		dataType: boolean
+		summarizeBy: sum
+		sourceColumn: is_indicative
+
+	column intent_to_awareness
+		dataType: double
+		summarizeBy: sum
+		sourceColumn: intent_to_awareness
+
+	partition fact_brand = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents(DataFolder & "fact_brand.csv"),[Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+				    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+				    Typed = Table.TransformColumnTypes(Promoted, {{"week", Int64.Type}, {"market", type text}, {"brand_awareness", type number}, {"brand_awareness_sd", type number}, {"purchase_intent", type number}, {"purchase_intent_sd", type number}, {"competitor_sov", type number}, {"sentiment", type number}, {"sentiment_sd", type number}, {"n_observations", Int64.Type}, {"is_indicative", type logical}, {"intent_to_awareness", type number}})
+				in
+				    Typed
+
+	annotation PBI_ResultType = Table

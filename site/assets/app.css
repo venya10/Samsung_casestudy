@@ -1,0 +1,665 @@
+/* Samsung MENA — Marketing Intelligence — static site
+   Presentation layer only. Design tokens, component styling and chart
+   styling are ported directly from the reference dashboard
+   (samsung-marketing-intelligence/dashboard/template.html + app_core.js) --
+   same custom-property names where they map 1:1, so the two are easy to
+   diff against each other later. No data, KPI definition, calculation or
+   filter-semantics code lives in this file or reads it.
+
+   Two deliberate departures from the reference, both noted at the point
+   they occur: (1) the 8-hue SERIES palette used for multi-category charts
+   (weekly sales by market, weekly spend by channel) has no reference
+   equivalent -- the reference's own chart palette is six chrome/status
+   colours, not an 8-way categorical set -- so the existing
+   colour-vision-validated palette is kept, anchored to the reference's
+   exact accent blue. (2) Fonts list Manrope/Inter/IBM Plex Mono first for
+   parity when online, with a plain system stack as the offline fallback --
+   the site still has to open by double-clicking with no network, which the
+   reference (served, not opened from disk) doesn't need to guarantee. */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root {
+  /* ---- surfaces & ink, ported 1:1 from the reference's :root ---- */
+  --bg: #F4F6F9;
+  --surface: #FFFFFF;
+  --surface-2: #FAFBFD;
+  --ink: #0A1020;
+  --ink-2: #333E52;
+  --muted: #707C91;
+  --faint: #9AA5B7;
+  --line: #E4E8EF;
+  --line-2: #EFF2F7;
+
+  /* ---- brand & accent ---- */
+  --blue: #1428A0;
+  --blue-2: #2B6DEF;
+  --blue-soft: #EAF0FE;
+  --blue-tint: #F5F8FF;
+  --accent: var(--blue-2);
+
+  /* ---- status, ported 1:1 ---- */
+  --pos: #0B7A54;
+  --pos-soft: #E6F5EF;
+  --warn: #B26A00;
+  --warn-soft: #FDF3E3;
+  --crit: #C0272D;
+  --crit-soft: #FDECEC;
+  --neutral: #8894A8;
+
+  /* ---- 8-way categorical chart palette -- no reference equivalent, see
+     file header. Slot 0 anchored to the reference's exact accent blue. ---- */
+  --series-1: #2B6DEF;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
+  --series-7: #4a3aa7;
+  --series-8: #e34948;
+  --series-muted: #C7D6FB;
+
+  /* legacy aliases some generated HTML still references -- same values,
+     kept so build_site.py/site_charts.py don't need a synchronised rename */
+  --samsung-blue: var(--blue);
+  --samsung-blue-dark: #0F2088;
+  --samsung-blue-tint: var(--blue-tint);
+  --good: var(--pos);
+  --warning: var(--warn);
+  --serious: #ec835a;
+  --critical: var(--crit);
+  --success-text: var(--pos);
+  --page: var(--bg);
+  --grid: var(--line-2);
+  --baseline: var(--line);
+
+  /* ---- type, ported 1:1 ---- */
+  --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --display: 'Manrope', 'Inter', -apple-system, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* ---- radius & shadow, ported 1:1 ---- */
+  --r-sm: 8px;
+  --r: 14px;
+  --r-lg: 20px;
+  --radius: var(--r-sm);
+  --radius-lg: var(--r);
+  --sh-1: 0 1px 2px rgba(16,26,48,.05), 0 1px 3px rgba(16,26,48,.04);
+  --sh-2: 0 2px 6px rgba(16,26,48,.06), 0 8px 24px rgba(16,26,48,.06);
+  --sh-3: 0 12px 40px rgba(16,26,48,.12);
+  --shadow: var(--sh-1);
+  --shadow-hover: var(--sh-2);
+
+  --sidebar-w: 228px;
+  --sidebar-w-collapsed: 72px;
+  --maxw: 1560px;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3, h4 { font-family: var(--display); margin: 0; letter-spacing: -.02em; }
+a { color: var(--blue-2); }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: #D4DAE4; border-radius: 8px; border: 3px solid var(--bg); }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ================================================================ shell */
+.app { display: flex; min-height: 100vh; }
+
+/* -------------------------------------------------------------- sidebar */
+/* Ported from the reference's .sidebar: white surface, hairline right
+   border, sticky full-height column. The reference sidebar is fixed-width
+   and has no collapse affordance; the toggle here is an addition (kept from
+   the previous build) rendered in the same light chrome instead of removed,
+   since a very wide first-load sidebar was an earlier, explicitly reported
+   complaint. */
+.sidebar {
+  flex: none; width: var(--sidebar-w); background: var(--surface); color: var(--ink);
+  border-right: 1px solid var(--line);
+  display: flex; flex-direction: column;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  transition: width .16s ease; z-index: 40;
+}
+html.sb-collapsed .sidebar { width: var(--sidebar-w-collapsed); }
+
+.sb-top { display: flex; justify-content: flex-end; padding: 10px 10px 0; }
+.sb-toggle {
+  background: transparent; border: none; color: var(--faint);
+  width: 28px; height: 28px; border-radius: var(--r-sm); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .12s ease, color .12s ease;
+}
+.sb-toggle:hover { background: var(--surface-2); color: var(--ink); }
+.sb-toggle svg { width: 15px; height: 15px; transition: transform .16s ease; }
+html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
+
+.sb-brand { padding: 22px 16px; border-bottom: 1px solid var(--line-2); margin-bottom: 8px; overflow: hidden; }
+.sb-brand a { display: flex; flex-direction: column; align-items: center; text-align: center; text-decoration: none; color: inherit; }
+.sb-logo { width: 156px; max-width: 100%; height: auto; color: var(--blue); display: block; margin: 0 auto 14px; }
+html.sb-collapsed .sb-logo { width: 24px; margin-bottom: 0; }
+.sb-name { display: block; font-family: var(--display); font-weight: 800; font-size: 13.5px; letter-spacing: -.03em; color: var(--ink); white-space: nowrap; }
+.sb-meta { display: block; font-family: var(--mono); font-size: 9.5px; letter-spacing: .13em; text-transform: uppercase; color: var(--faint); margin-top: 7px; white-space: nowrap; }
+html.sb-collapsed .sb-name, html.sb-collapsed .sb-meta { display: none; }
+
+.sb-nav { display: flex; flex-direction: column; gap: 1px; padding: 10px 12px 16px; flex: 1; overflow-y: auto; }
+.sb-nav-label {
+  font-family: var(--mono); font-size: 9px; font-weight: 600; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--faint); padding: 12px 11px 7px;
+}
+.sb-nav-label:first-child { padding-top: 2px; }
+.sb-nav a {
+  display: flex; align-items: center; gap: 11px; padding: 9px 11px;
+  border-radius: var(--r-sm); color: var(--ink-2); font-size: 13.2px; font-weight: 500;
+  text-decoration: none; white-space: nowrap; overflow: hidden;
+  transition: background .12s ease, color .12s ease;
+}
+.sb-nav a .ic { flex: none; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; opacity: .9; }
+.sb-nav a .lbl { overflow: hidden; text-overflow: ellipsis; }
+.sb-nav a .badge {
+  margin-left: auto; font-family: var(--mono); font-size: 9.5px; font-weight: 600;
+  background: var(--crit); color: #fff; border-radius: 20px; padding: 2px 6px; flex: none;
+}
+.sb-nav a:hover { background: var(--surface-2); color: var(--ink); }
+.sb-nav a.on { background: var(--blue-soft); color: var(--blue); font-weight: 600; }
+.sb-nav a.on .ic { opacity: 1; }
+html.sb-collapsed .sb-nav-label, html.sb-collapsed .sb-nav a .lbl, html.sb-collapsed .sb-nav a .badge { display: none; }
+html.sb-collapsed .sb-nav a { justify-content: center; padding: 10px; }
+
+/* ---------------------------------------------------------------- main */
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.wrap { max-width: var(--maxw); margin: 0 auto; padding: 24px 30px 60px; width: 100%; }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+/* Sticky, translucent header: page title + filter bar on one row, with the
+   page's KPI tiles (when it has any) stacked directly beneath -- title,
+   filters and KPIs all stay pinned together while only the charts below
+   scroll. Bled full-bleed via negative margins matching .wrap's own
+   padding, then re-padded to the same inset so its content still lines up
+   with the page below -- same technique the reference reserves for
+   edge-to-edge chrome. */
+.page-header-bar {
+  position: sticky; top: 0; z-index: 30;
+  margin: 0 -30px 22px; padding: 13px 30px 14px;
+  background: rgba(244, 246, 249, .78);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  backdrop-filter: blur(14px) saturate(1.4);
+  border-bottom: 1px solid var(--line);
+}
+.page-header-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+/* Whatever mounts right after the title/filter row (a page's KPI tiles) --
+   a little breathing room so the two rows read as stacked sections, not
+   glued together. */
+.page-header-top + * { margin-top: 12px; }
+.page-head { margin: 0; flex: 1 1 auto; min-width: 0; }
+h1 { font-size: 19px; font-weight: 800; letter-spacing: -.015em; margin: 0; line-height: 1.2; color: var(--ink); }
+
+h2 {
+  font-family: var(--mono); font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--faint); margin: 30px 0 12px; padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+h3 { font-size: 14.5px; font-weight: 700; letter-spacing: -.008em; margin: 0 0 3px; color: var(--ink); }
+
+/* ---------------------------------------------------------------- kpi */
+/* Compact: icon + header, number, and (opt-in) a trend badge + sparkline.
+   Plain surface -- colour lives in the icon (stroke: currentColor, set by
+   --k-accent below) instead of tinting the whole tile. */
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.card + .kpis { margin-top: 14px; }
+/* Overview's KPI row is always exactly 6 cards -- force one line rather than
+   the generic auto-fit wrap every other page's (differently-sized) KPI row
+   still uses. minmax(0,1fr) rather than a fixed px width so the row still
+   shrinks with the sidebar/viewport instead of overflowing. */
+#mount-kpis .kpis { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.kpi {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r); padding: 11px 13px 10px; box-shadow: var(--sh-1);
+  position: relative; transition: box-shadow .16s, transform .16s;
+}
+.kpi:hover { box-shadow: var(--sh-2); transform: translateY(-1px); }
+.kpi .lab {
+  font-family: var(--mono); font-size: 9.5px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--ink); display: flex; align-items: center; gap: 5px;
+}
+.kpi-icon { flex: none; color: var(--k-accent, var(--muted)); }
+.kpi .val {
+  font-family: var(--display); font-size: 17px; font-weight: 800; letter-spacing: -.02em;
+  color: var(--ink); margin: 5px 0 0; font-variant-numeric: tabular-nums; line-height: 1.1;
+}
+.kpi .val .u { font-family: var(--sans); font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: -.01em; }
+.kpi .foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 5px; }
+.kpi .delta { display: inline-flex; align-items: center; gap: 3px; font-family: var(--mono); font-size: 10px; font-weight: 600; padding: 1.5px 5px; border-radius: 5px; }
+.kpi .delta.up { color: var(--pos); background: var(--pos-soft); }
+.kpi .delta.down { color: var(--crit); background: var(--crit-soft); }
+.kpi .vs { font-size: 9.5px; color: var(--faint); }
+.kpi .spark { height: 20px; width: 100%; margin-top: 5px; display: block; }
+
+/* Six-hue pastel cycle for the icon colour. Position-based, so the same KPI
+   can land on a different hue on a shorter row elsewhere -- deliberate,
+   since the colour is decorative rhythm, not a per-metric ID. */
+.kpis .kpi:nth-child(6n+1) { --k-accent: #7FA8FF; }
+.kpis .kpi:nth-child(6n+2) { --k-accent: #6FCFA0; }
+.kpis .kpi:nth-child(6n+3) { --k-accent: #F2AD5C; }
+.kpis .kpi:nth-child(6n+4) { --k-accent: #B39BF0; }
+.kpis .kpi:nth-child(6n+5) { --k-accent: #F291B7; }
+.kpis .kpi:nth-child(6n+6) { --k-accent: #62C4C2; }
+
+/* Overview KPI cards are clickable -- either an <a> jumping to another page
+   (Open alerts) or a <button data-kpi> selecting which chart pair shows
+   below (Sales, Media spend, MER, Earned share, Unmeasured spend).
+   .kpi:hover's lift already reads as clickable; display:contents keeps the
+   wrapping element out of the grid box model so .kpi stays the actual grid
+   item either way. */
+.kpi-link { display: contents; text-decoration: none; color: inherit; cursor: pointer; background: none; border: none; padding: 0; font: inherit; }
+.kpi-link.selected .kpi { border-color: var(--blue-2); box-shadow: 0 0 0 2px var(--blue-2), var(--sh-1); }
+
+/* Early Warning KPI row: Critical/High/Medium's icon matches the page's
+   red/orange/yellow severity colours -- the same pastel register (SERIES_PASTEL)
+   every other chart on the site uses, not the vivid alert-red family. */
+#mount-ew-kpis .kpi:nth-child(2) { --k-accent: #F2A6A6; }
+#mount-ew-kpis .kpi:nth-child(3) { --k-accent: #F2AD5C; }
+#mount-ew-kpis .kpi:nth-child(4) { --k-accent: #F2D98A; }
+
+/* --------------------------------------------------------------- cards */
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 14px; }
+/* Overview's 4-chart grid: a fixed 2x2 (not auto-fit) so the two columns
+   are always exactly equal width, one gap value so horizontal and vertical
+   spacing match, and every card stretched + given a shared min-height so
+   the four boxes read as one consistent set regardless of how many rows a
+   given chart's bar/lollipop list happens to have. */
+#ov-charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: start; }
+#ov-charts > div { display: flex; min-width: 0; }
+#ov-charts .card { display: flex; flex-direction: column; width: 100%; }
+/* Brand page's 4-chart grid -- same equal-column, equal-gap treatment. */
+#mount-brand-charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: start; margin-top: 20px; }
+#mount-brand-charts > div { display: flex; min-width: 0; }
+#mount-brand-charts .card { display: flex; flex-direction: column; width: 100%; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--sh-1); padding: 16px 18px 18px; }
+.card-head { margin-bottom: 12px; }
+.card-sub { font-size: 12px; color: var(--muted); }
+
+.chart { width: 100%; height: auto; display: block; overflow: visible; }
+/* Fixed handful of boxes, not a data series -- stretching to the card's full
+   width the way a bar/line chart should would blow the nodes up far past
+   their designed size. Capped near its natural drawn width and centred. */
+.chart.lineage { max-width: 620px; margin: 0 auto; }
+/* Chart text classes ported from the reference's .axis/.gridline/.axisline/
+   .dlabel/.qlabel -- names kept as they already were in this codebase
+   (.tick/.cat/.val/.ann/.axis-title) so build_site.py/site_charts.py/
+   app_charts.js don't need renaming, only the values below changed. */
+.chart .tick { font-family: var(--mono); font-size: 9.5px; fill: var(--faint); letter-spacing: .04em; }
+.chart .cat { font-size: 12.3px; fill: var(--ink); font-weight: 500; font-family: var(--sans); }
+.chart .cat-sub { font-family: var(--mono); font-size: 9.5px; fill: var(--faint); }
+.chart .val { font-family: var(--mono); font-size: 10px; fill: var(--ink-2); font-weight: 600; }
+.chart .ann { font-family: var(--mono); font-size: 9px; fill: var(--faint); letter-spacing: .1em; text-transform: uppercase; font-weight: 600; }
+.chart .ann-strong { font-size: 11.5px; fill: var(--ink-2); font-family: var(--sans); font-weight: 600; }
+.chart .axis-title { font-size: 11px; fill: var(--muted); font-family: var(--sans); }
+.chart .bar, .chart .pt { transition: opacity .15s; cursor: default; }
+.chart:hover .bar { opacity: .85; }
+.chart .bar:hover, .chart .pt:hover { opacity: 1; }
+[data-fdim] { cursor: pointer; }
+
+/* Funnel chart (Channels page) -- text sits on filled trapezoids, so labels
+   need explicit colour rather than the ink-on-white classes above. */
+.chart .fun-label { font-family: var(--sans); font-size: 12.5px; font-weight: 600; fill: #fff; }
+.chart .fun-val { font-family: var(--mono); font-size: 11px; fill: rgba(255,255,255,.85); }
+.chart .fun-rate { font-family: var(--mono); font-size: 11.5px; font-weight: 600; fill: var(--ink); }
+.chart .fun-rate-sub { font-family: var(--mono); font-size: 9px; fill: var(--faint); }
+.chart .lineage-label { font-family: var(--mono); font-size: 9px; font-weight: 600; fill: var(--ink); }
+
+.legend { display: flex; flex-wrap: wrap; gap: 16px; margin: 2px 0 10px; }
+.lg-item { display: inline-flex; align-items: center; gap: 6px; font-size: 11.4px; color: var(--muted); }
+.lg-line { width: 11px; height: 3px; border-radius: 2px; }
+.lg-dot { width: 11px; height: 11px; border-radius: 3px; }
+
+/* --------------------------------------------------------- pie (Channels) */
+/* Slices double as the click target for the channel-detail drill-down
+   below (data-select-dim/-val, a local interaction -- not the page-wide
+   [data-fdim] cross-filter). Legend rows repeat the same click target since
+   a thin slice is a hard click, same rationale as legend()'s filter_dim. */
+.pie-block { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.pie-svg-wrap { width: 100%; max-width: 240px; }
+.pie-slice {
+  cursor: pointer; stroke: var(--surface); stroke-width: 2;
+  transition: opacity .15s; transform-box: fill-box; transform-origin: center;
+}
+.pie-slice:hover { opacity: .85; }
+.pie-slice.selected { stroke: var(--ink); stroke-width: 2.5; }
+.chart-pie:has(.pie-slice.selected) .pie-slice:not(.selected) { opacity: .55; }
+
+.pie-legend { display: flex; flex-direction: column; gap: 3px; width: 100%; }
+.pie-legend-item {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  background: none; border: 1px solid transparent; border-radius: 8px;
+  padding: 5px 8px; cursor: pointer; font-family: var(--sans); font-size: 12.2px;
+  color: var(--ink-2); text-align: left; transition: background .12s, border-color .12s;
+}
+.pie-legend-item:hover { background: var(--surface-2); }
+.pie-legend-item.selected { border-color: var(--blue-2); background: var(--blue-tint); color: var(--blue); font-weight: 600; }
+.pli-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pli-share { font-family: var(--mono); font-size: 11px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.pie-legend-item.selected .pli-share { color: var(--blue); }
+
+/* The Channels page's pie card spans the full page width (nothing shares
+   its row any more) -- pie fixed-size on the left, the channel legend
+   filling the rest of the width on the right, instead of .pie-block's
+   default stacked layout (kept as-is for Overview's compact donut cards). */
+#mount-eff-table .pie-block { flex-direction: row; align-items: center; gap: 32px; }
+#mount-eff-table .pie-svg-wrap { flex: none; max-width: 160px; }
+#mount-eff-table .pie-legend { flex: 1; display: flex; flex-direction: column; gap: 7px; }
+/* Breathing room between the Spend/Sales/Conversions/ROAS KPI row and the
+   by-product/by-market charts below it. */
+#mount-channel-detail-kpis { margin-top: 16px; margin-bottom: 20px; }
+/* Breathing room between the Early Warning intro note and the sensitivity
+   card below it. */
+#mount-ew-sensitivity { margin-top: 20px; }
+
+/* donut_chart()'s centred total -- absolutely positioned over the hollow
+   middle of the ring, ignoring pointer events so hover/click still reach
+   the slices underneath. */
+.donut-wrap { position: relative; }
+.donut-center {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center; pointer-events: none;
+}
+.donut-center-val { font-family: var(--display); font-size: 17px; font-weight: 800; color: var(--ink); letter-spacing: -.02em; }
+.donut-center-sub { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+
+/* ----------------------------------------------------------- filter bar */
+/* Ported from the reference's .filters/.fset/.fbtn/.fmenu, then shrunk and
+   right-aligned to sit beside the page title in .page-header-bar instead of
+   spanning its own full-width row below it. */
+#mount-filterbar { flex: 0 1 auto; min-width: 0; }
+.fbar { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; justify-content: flex-end; padding: 0; }
+.fset { position: relative; }
+.fbtn {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 7px;
+  padding: 4.5px 8px; cursor: pointer; font-size: 11.3px; font-weight: 500;
+  box-shadow: var(--sh-1); transition: border-color .12s; white-space: nowrap; color: var(--ink);
+}
+.fbtn:hover { border-color: #C9D2E0; }
+.fbtn.active { border-color: var(--blue-2); background: var(--blue-tint); color: var(--blue); }
+.fbtn .n { font-weight: 600; color: var(--ink); }
+.fbtn.active .n { color: var(--blue); }
+.fbtn svg { width: 8px; height: 8px; opacity: .4; }
+.fmenu {
+  display: none; position: absolute; top: calc(100% + 6px); left: 0; z-index: 60;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: var(--sh-3); padding: 8px; min-width: 236px; max-height: 330px; overflow-y: auto;
+}
+.fmenu.open { display: block; }
+.fmenu-head { display: flex; justify-content: space-between; padding: 5px 9px 8px; border-bottom: 1px solid var(--line-2); margin-bottom: 5px; }
+.fmenu-head button { background: none; border: none; color: var(--blue-2); font-size: 11px; cursor: pointer; font-weight: 600; padding: 0; font-family: var(--sans); }
+.fmenu-head button:hover { text-decoration: underline; }
+.fmenu label { display: flex; align-items: center; gap: 9px; padding: 7px 9px; border-radius: 7px; cursor: pointer; font-size: 12.8px; color: var(--ink-2); white-space: nowrap; }
+.fmenu label:hover { background: var(--surface-2); }
+.fmenu input[type="checkbox"] { accent-color: var(--blue-2); width: 14px; height: 14px; }
+.fbar-note { font-family: var(--mono); font-size: 9px; color: var(--faint); letter-spacing: .03em; font-variant-numeric: tabular-nums; }
+.fbar-note.fbar-error { color: var(--crit); font-weight: 600; font-family: var(--sans); }
+.fbar-reset { background: none; border: none; color: var(--muted); font-size: 11px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; padding: 4.5px 3px; }
+.fbar-reset:hover { color: var(--ink); }
+.fbar-offline { font-size: 11px; color: var(--faint); font-style: italic; }
+
+/* -------------------------------------------------------------- bullets */
+/* Short, scannable findings (Insights & Actions) -- a plain marker list,
+   distinct from .actions' numbered cards which are for things to DO. */
+.bullets { margin: 0; padding-left: 20px; list-style: disc; }
+.bullets li { color: var(--ink-2); font-size: 13px; line-height: 1.65; margin-bottom: 8px; }
+.bullets li:last-child { margin-bottom: 0; }
+.bullets li b { color: var(--ink); }
+
+/* Insights & Actions: the two AI-generated sections inside #mount-ai-body,
+   both rendered as plain .bullets lists -- a manager reads this once, not a
+   reference doc, so no boxed/numbered card treatment. */
+.ai-section-h { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-top: 18px; }
+.ai-section-h:first-child { margin-top: 0; }
+
+/* --------------------------------------------------------------- note */
+/* Ported from the reference's .callout / .callout.warn. */
+.note { background: var(--blue-tint); border: 1px solid #D6E2FB; border-left: 3px solid var(--blue-2); border-radius: var(--r-sm); padding: 13px 16px; margin: 13px 0 0; font-size: 12.7px; color: var(--ink-2); line-height: 1.62; }
+.note b { color: var(--ink); }
+.note + .note { margin-top: 10px; }
+.note::before { content: "★"; color: var(--blue-2); margin-right: 6px; }
+.note.note-warn { background: var(--warn-soft); border-color: #F0DCB8; border-left-color: var(--warn); color: var(--ink-2); }
+.note.note-warn b { color: var(--ink); }
+.note.note-warn::before { color: var(--warn); }
+
+/* -------------------------------------------------------------- tables */
+/* Ported 1:1 from the reference's table/.tw. */
+.table-wrap { overflow-x: auto; margin-top: 4px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 12.7px; }
+th {
+  text-align: left; background: var(--surface-2); border-bottom: 1px solid var(--line);
+  font-family: var(--mono); font-size: 9.5px; font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--muted); padding: 10px 13px; white-space: nowrap;
+}
+td { padding: 9px 13px; border-bottom: 1px solid var(--line-2); white-space: nowrap; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--blue-tint); }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--mono); }
+/* Data-explorer headers: blue tint marks a column that's computed or
+   aggregated, not carried over unchanged from its source table. */
+th.tbl-h.derived { background: var(--blue-tint); color: var(--blue-2); }
+.tbl-h-swatch { display: inline-block; width: 9px; height: 9px; border-radius: 2px; vertical-align: middle; margin: 0 2px; }
+.tbl-h-swatch.derived { background: var(--blue-2); }
+td.neg { color: var(--crit); }
+td.pos { color: var(--pos); }
+.pill { display: inline-flex; align-items: center; gap: 4px; padding: 2.5px 8px; border-radius: 20px; font-size: 10.5px; font-weight: 600; font-family: var(--mono); letter-spacing: .02em; white-space: nowrap; }
+.pill.ok { background: var(--pos-soft); color: var(--pos); }
+.pill.bad { background: var(--crit-soft); color: var(--crit); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+/* Early Warning's red/orange/yellow, reused wherever severity appears in a table. */
+.pill[class*="sev-"] { text-transform: uppercase; }
+.pill.sev-critical { background: #FDECEC; color: #DC2626; }
+.pill.sev-high { background: #FDECDF; color: #EA580C; }
+.pill.sev-medium { background: #FEF6D8; color: #EAB308; }
+
+details.table-view { margin-top: 12px; }
+details.table-view > summary { cursor: pointer; font-size: 12.5px; color: var(--blue-2); font-weight: 600; list-style: none; padding: 4px 0; user-select: none; }
+details.table-view > summary::-webkit-details-marker { display: none; }
+details.table-view > summary::before { content: "▸ "; font-size: 10px; }
+details.table-view[open] > summary::before { content: "▾ "; }
+
+/* ------------------------------------------------------------ lineage */
+.ln-src { background: var(--blue); color: #fff; border-radius: var(--r); padding: 16px 20px; margin-bottom: 6px; }
+.ln-src-name { font-size: 15px; font-weight: 700; letter-spacing: -.01em; }
+.ln-src-meta { font-size: 12px; color: rgba(255,255,255,.82); margin-top: 4px; }
+.ln-arrow { text-align: center; font-size: 12px; color: var(--muted); padding: 8px 0 10px; }
+.ln-arrow b { color: var(--ink-2); }
+.ln-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(228px, 1fr)); gap: 10px; }
+.ln-card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 13px 15px; border-top: 3px solid var(--series-1); box-shadow: var(--sh-1); }
+.ln-card.spine { border-top-color: var(--blue); background: var(--blue-tint); }
+.ln-card.derived { border-top-color: var(--series-3); }
+.ln-name { font-family: var(--mono); font-size: 12.5px; font-weight: 600; color: var(--ink); }
+.ln-grain { font-size: 11px; color: var(--faint); margin-top: 4px; }
+.ln-count { font-size: 12px; color: var(--ink-2); font-weight: 600; margin-top: 6px; }
+.ln-how { font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+.recon { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: var(--pos-soft); border: 1px solid #BFE0D2; border-radius: 9px; padding: 11px 15px; margin-top: 12px; font-size: 12.7px; color: var(--pos); }
+.recon b { color: var(--ink); }
+.recon .tick { font-weight: 700; }
+
+/* ------------------------------------------------------- data explorer */
+/* Tab bar + the one-click "download all" sit together, above the card --
+   this is meant to be the first and most prominent thing on the page. */
+.tbl-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; background: var(--surface-2); padding: 4px; border-radius: var(--r-sm); border: 1px solid var(--line); margin-bottom: 10px; }
+.tab { font-family: var(--sans); font-size: 12.5px; font-weight: 600; color: var(--muted); background: transparent; border: none; border-radius: 6px; padding: 7px 14px; cursor: pointer; transition: background .12s, color .12s; white-space: nowrap; }
+.tab:hover { color: var(--ink); background: var(--surface); }
+.tab.active { color: #fff; background: var(--blue); }
+
+.tbl-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+.tbl-bar input {
+  font-family: var(--sans); font-size: 13px; padding: 8px 12px;
+  border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface);
+  color: var(--ink); outline: none; flex: 1; min-width: 180px;
+}
+.tbl-bar input:focus { border-color: var(--blue-2); }
+
+/* Any table built with table(..., sortable=True) -- click a header to sort,
+   click again to reverse. */
+.sortable-table th.sort-h { cursor: pointer; user-select: none; }
+.sortable-table th.sort-h:hover { color: var(--ink); }
+
+.btn-dl {
+  flex: none; display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 18px; font-family: var(--sans); font-size: 13px; font-weight: 600;
+  background: var(--blue); color: #fff; border-radius: var(--r-sm);
+  text-decoration: none; white-space: nowrap; transition: background .12s;
+}
+.btn-dl:hover { background: #0F2088; color: #fff; }
+.btn-dl:active { transform: translateY(1px); }
+button.btn-dl { border: none; font: inherit; cursor: pointer; }
+button.btn-dl:disabled { opacity: .5; cursor: default; }
+
+.sens-row { display: flex; align-items: center; gap: 14px; margin-top: 4px; flex-wrap: wrap; }
+.sens-row input[type="range"] { flex: 1; min-width: 160px; max-width: 320px; accent-color: var(--blue-2); }
+.sens-value { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--ink); min-width: 34px; }
+#tbl-meta { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+
+#tbl-host { overflow: auto; max-height: 560px; border-radius: var(--r-sm); border: 1px solid var(--line); box-shadow: none; }
+#tbl-host table { font-size: 12.3px; }
+#tbl-host thead th { position: sticky; top: 0; z-index: 2; cursor: pointer; user-select: none; box-shadow: inset 0 -1px 0 var(--line); }
+#tbl-host thead th:hover { color: var(--ink); }
+#tbl-host td { white-space: nowrap; }
+.tbl-null { color: var(--faint); }
+#tbl-more {
+  margin-top: 10px; padding: 8px 18px; font-family: var(--sans); font-size: 13px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 20px;
+  color: var(--blue-2); cursor: pointer; font-weight: 600;
+}
+#tbl-more:hover { border-color: var(--blue-2); }
+
+/* cleaning log -- compact table inside the existing table-view disclosure */
+.dq-tbl td:first-child {
+  font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--muted); white-space: nowrap; width: 1%;
+}
+.dq-tbl td { white-space: normal; vertical-align: top; }
+.dq-tbl tr.crit td:first-child { color: var(--crit); }
+.dq-tbl tr.flag td:first-child { color: var(--warn); }
+.dq-act { color: var(--muted); }
+
+/* -------------------------------------------------------------- alerts */
+/* Ported from the reference's .alert/.sev, then converted to <details> so the
+   open list defaults to one line per alert (severity + rule name) and the
+   entity breakdown / owner / action only render once a reader opens it --
+   the same disclosure pattern already used for "View as table" below. */
+details.alert { background: var(--surface); border: 1px solid var(--line); border-left-width: 3px; border-radius: var(--r); box-shadow: var(--sh-1); margin-bottom: 9px; overflow: hidden; }
+.alert-summary { display: flex; align-items: center; gap: 10px; padding: 12px 17px; cursor: pointer; list-style: none; user-select: none; }
+.alert-summary::-webkit-details-marker { display: none; }
+.alert-summary::before { content: "▸"; font-size: 10px; color: var(--faint); flex: none; }
+details.alert[open] > .alert-summary::before { content: "▾"; }
+.alert-sev { font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; flex: none; margin-right: 10px; }
+.alert-summary .alert-title { flex: 1; font-family: var(--display); font-size: 13.3px; font-weight: 700; letter-spacing: -.008em; }
+.alert-scope { font-family: var(--mono); font-size: 10px; color: var(--faint); flex: none; white-space: nowrap; margin-left: 10px; }
+.alert-body { padding: 0 17px 14px; }
+.alert-meta { font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); margin-bottom: 6px; }
+.alert-detail { font-size: 12.7px; color: var(--ink-2); margin-top: 8px; line-height: 1.5; }
+.alert-foot { font-size: 12.7px; color: var(--ink-2); margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line-2); line-height: 1.5; }
+.alert-foot b { color: var(--ink); }
+
+/* ---------------------------------------------------------------- chat */
+/* Ported from the reference's .chat/.chatbox/.msg/.ans/.composer/.sugg. */
+.chat-shell { display: grid; grid-template-columns: 1fr 300px; gap: 14px; align-items: start; }
+@media (max-width: 1180px) { .chat-shell { grid-template-columns: 1fr; } }
+
+.chat-log { min-height: 240px; }
+.msg { margin-bottom: 16px; }
+.msg-role { font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); margin-bottom: 6px; }
+.msg.user .bubble { background: var(--blue); color: #fff; border-radius: 14px 14px 4px 14px; padding: 10px 14px; display: inline-block; max-width: 78%; font-size: 13px; }
+.msg.bot .bubble { background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px 14px 14px 14px; padding: 15px 17px; font-size: 13.4px; line-height: 1.6; }
+.msg.bot .bubble table { margin: 10px 0; }
+.msg.bot .bubble p { margin: 0 0 9px; }
+.msg.bot .bubble p:last-child { margin-bottom: 0; }
+.msg.bot .bubble code { background: var(--surface); border: 1px solid var(--line); padding: 1px 5px; border-radius: 4px; font-size: 12px; font-family: var(--mono); }
+
+.suggestions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+.chip { background: var(--surface-2); border: 1px solid var(--line); border-radius: 9px; padding: 9px 12px; font-size: 12.3px; color: var(--ink-2); cursor: pointer; font-family: var(--sans); line-height: 1.45; transition: border-color .12s, background .12s, color .12s; }
+.chip:hover { border-color: var(--blue-2); background: var(--blue-tint); color: var(--blue); }
+
+.composer { display: flex; gap: 9px; margin-top: 6px; }
+.composer input { flex: 1; padding: 10px 13px; font-size: 13px; font-family: var(--sans); border: 1px solid var(--line); border-radius: 9px; background: var(--surface-2); color: var(--ink); outline: none; }
+.composer input:focus { border-color: var(--blue-2); background: var(--surface); }
+.composer button { padding: 0 17px; font-size: 13px; font-weight: 600; font-family: var(--sans); background: var(--blue); color: #fff; border: none; border-radius: 9px; cursor: pointer; }
+.composer button:hover { background: #0F2088; }
+.composer button:disabled { opacity: .5; cursor: default; }
+
+.sql-view { margin-top: 12px; padding-top: 11px; border-top: 1px dashed var(--line); }
+.sql-view summary { cursor: pointer; font-family: var(--mono); font-size: 10.3px; color: var(--blue-2); font-weight: 600; list-style: none; }
+.sql-view summary::-webkit-details-marker { display: none; }
+.sql-view summary::before { content: "▸ "; font-size: 10px; }
+.sql-view[open] summary::before { content: "▾ "; }
+.sql-view pre { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 11px 14px; font-size: 11.5px; overflow-x: auto; margin: 8px 0 0; font-family: var(--mono); line-height: 1.55; }
+
+.side-note { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 15px 16px; font-size: 12.7px; color: var(--ink-2); line-height: 1.6; box-shadow: var(--sh-1); }
+.side-note h3 { font-family: var(--mono); font-size: 9px; letter-spacing: .13em; text-transform: uppercase; color: var(--faint); font-weight: 600; margin-bottom: 11px; }
+.side-note ul { margin: 8px 0; padding-left: 18px; }
+.side-note li { margin-bottom: 4px; }
+.side-note code { background: var(--surface-2); border: 1px solid var(--line); padding: 1px 5px; border-radius: 4px; font-size: 11.6px; font-family: var(--mono); }
+
+.status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; }
+
+/* ------------------------------------------------------------- tooltip */
+/* Ported 1:1 from the reference's .tip. */
+#tip {
+  position: fixed; pointer-events: none; opacity: 0; z-index: 200;
+  background: #0C1428; color: #fff; border-radius: 9px; padding: 9px 12px;
+  font-size: 11.8px; line-height: 1.6; max-width: 280px;
+  box-shadow: var(--sh-3); transition: opacity .11s;
+}
+#tip .tt { font-family: var(--display); font-weight: 700; margin-bottom: 3px; font-size: 12.5px; }
+#tip .tb { color: rgba(255,255,255,.6); font-family: var(--mono); font-size: 10.8px; }
+/* Multi-stat tooltip bodies (e.g. the Influencers bar chart): one fact per
+   line instead of a run-on "·"-joined string. */
+#tip .tb .tip-list { list-style: disc; margin: 4px 0 0; padding-left: 14px; }
+#tip .tb .tip-list li { margin-bottom: 2px; }
+#tip .tb .tip-list li:last-child { margin-bottom: 0; }
+
+/* -------------------------------------------------------------- footer */
+footer { border-top: 1px solid var(--line-2); padding: 20px 30px 26px; font-size: 12px; color: var(--faint); }
+.footer-inner { max-width: var(--maxw); margin: 0 auto; display: flex; gap: 18px; flex-wrap: wrap; }
+.footer-inner a { color: var(--muted); }
+
+@media (max-width: 900px) {
+  .sidebar { position: fixed; z-index: 50; }
+  .main { margin-left: var(--sidebar-w-collapsed); }
+  html.sb-collapsed .sidebar { width: 0; overflow: hidden; }
+}
+
+@media (max-width: 1180px) {
+  #mount-kpis .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 720px) {
+  .wrap { padding: 18px 16px 50px; }
+  /* A sticky header carrying title + filters + a full KPI row can run
+     taller than a phone screen has room for -- cap it and let it scroll
+     internally rather than crowding out the page below entirely. */
+  .page-header-bar { margin: 0 -16px 12px; padding: 11px 16px 10px; max-height: 78vh; overflow-y: auto; }
+  h1 { font-size: 17px; }
+  .grid-2, .grid-3, #ov-charts, #mount-brand-charts { grid-template-columns: 1fr; }
+  #mount-kpis .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #mount-eff-table .pie-block { flex-direction: column; }
+  #mount-eff-table .pie-svg-wrap { max-width: 240px; }
+}
+
+@media print {
+  .sidebar, .composer, .suggestions { display: none; }
+  .card, .kpi, .alert { box-shadow: none; }
+  .page-header-bar { position: static; background: none; backdrop-filter: none; }
+}

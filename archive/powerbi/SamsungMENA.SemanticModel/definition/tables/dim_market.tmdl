@@ -1,0 +1,28 @@
+table dim_market
+
+	column market
+		dataType: string
+		summarizeBy: none
+		sourceColumn: market
+
+	column market_label
+		dataType: string
+		summarizeBy: none
+		sourceColumn: market_label
+
+	column label_confirmed
+		dataType: boolean
+		summarizeBy: sum
+		sourceColumn: label_confirmed
+
+	partition dim_market = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents(DataFolder & "dim_market.csv"),[Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+				    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+				    Typed = Table.TransformColumnTypes(Promoted, {{"market", type text}, {"market_label", type text}, {"label_confirmed", type logical}})
+				in
+				    Typed
+
+	annotation PBI_ResultType = Table

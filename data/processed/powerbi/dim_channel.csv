@@ -1,0 +1,9 @@
+channel,media_type,channel_role,revenue_attributed
+B2B Roadshow,paid,brand,True
+Influencer,paid,response,True
+PR,earned,brand,False
+Paid Social,paid,response,True
+Retail,paid,response,True
+Search,paid,response,True
+TV,paid,brand,False
+Website,earned,owned,True

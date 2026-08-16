@@ -1,0 +1,5 @@
+/// Absolute path to the folder holding the exported CSVs.
+/// Change this one value to repoint the model at a different export.
+expression DataFolder = "C:\\Users\\Venya\\samsung-mena-mi\\data\\processed\\powerbi\\" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: 32c9b257-9b39-4ee9-a97f-cc2aa771c836
+	annotation PBI_ResultType = Text

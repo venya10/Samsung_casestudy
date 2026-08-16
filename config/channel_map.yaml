@@ -1,0 +1,95 @@
+# Canonical channel taxonomy.
+#
+# Source systems spell the same channel several ways (the taxonomy changed
+# mid-year and nobody backfilled). Every raw spelling maps to one canonical
+# channel here, so this file -- not the code -- is what you edit when the real
+# Samsung files arrive with their own naming.
+
+canonical_channels:
+  - Paid Search
+  - Meta
+  - TikTok
+  - YouTube
+  - Programmatic Display
+  - TV
+  - OOH
+
+# raw spelling (lowercased, stripped) -> canonical channel
+channel_aliases:
+  paid search: Paid Search
+  paid_search: Paid Search
+  paidsearch: Paid Search
+  search: Paid Search
+  sem: Paid Search
+  google ads: Paid Search
+
+  meta: Meta
+  facebook/instagram: Meta
+  facebook: Meta
+  instagram: Meta
+  fb: Meta
+
+  tiktok: TikTok
+  tik tok: TikTok
+
+  youtube: YouTube
+  yt: YouTube
+
+  programmatic display: Programmatic Display
+  programmatic: Programmatic Display
+  display: Programmatic Display
+  dv360: Programmatic Display
+
+  tv: TV
+  television: TV
+
+  ooh: OOH
+  out of home: OOH
+
+# Website analytics uses its own channel grouping. This maps site channel groups
+# onto the media channels so paid sessions can be tied back to spend.
+web_group_to_channel:
+  Paid Search: Paid Search
+  Paid Social: Meta          # Meta + TikTok collapse into Paid Social on site
+  Video: YouTube
+  Display: Programmatic Display
+  Influencer: Influencer
+  Organic Search: Earned
+  Direct: Earned
+
+# Social platform spellings -> canonical platform
+platform_aliases:
+  instagram: Instagram
+  ig: Instagram
+  tiktok: TikTok
+  tik tok: TikTok
+  youtube: YouTube
+  yt: YouTube
+  x: X
+  twitter: X
+  x (twitter): X
+  facebook: Facebook
+  fb: Facebook
+
+# Which canonical channels are brand-building vs performance. Drives the adstock
+# priors used by the marketing mix model.
+channel_role:
+  Paid Search: performance
+  Meta: performance
+  TikTok: performance
+  YouTube: brand
+  Programmatic Display: brand
+  TV: brand
+  OOH: brand
+
+# Paid vs earned classification for the "paid vs earned" comparison.
+media_type:
+  Paid Search: paid
+  Meta: paid
+  TikTok: paid
+  YouTube: paid
+  Programmatic Display: paid
+  TV: paid
+  OOH: paid
+  Influencer: influencer
+  Earned: earned

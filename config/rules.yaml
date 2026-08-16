@@ -1,0 +1,340 @@
+# =============================================================================
+# Early Warning Marketing System — rule definitions
+# =============================================================================
+# Rules are data, not code. A marketing manager changes a threshold, mutes a rule
+# or reassigns an owner without touching Python, and the change is reviewable in
+# version control.
+#
+# DESIGN NOTE — why most of these compare markets rather than weeks.
+#
+# The dataset is 8 weeks. A conventional early-warning system compares a recent
+# window against a long trailing baseline; with 8 points that baseline does not
+# exist, and any rule needing one would either never fire or fire on noise.
+#
+# What this data has instead is a PANEL: 8 comparable subsidiaries running the
+# same 8 channels in the same 8 weeks. So the primary detector is cross-sectional
+# — a market is flagged when it diverges from its own peer group in the same week,
+# using median and MAD so one extreme market cannot mask the rest. That is a
+# stronger signal here than a trend fitted through 8 points, and it is available
+# from week 1 rather than needing a quarter of history to warm up.
+#
+# A small number of time rules survive, with deliberately short windows (2 weeks
+# against the 3 before it) and they are labelled as movements, not trends.
+#
+# Each rule declares:
+#   scope       market_week | channel | influencer | portfolio
+#   test        see src/alerts.py for each implementation
+#   metric      column on the table named by scope
+#   threshold   test-specific trigger level
+#   severity    critical | high | medium   (drives routing and SLA)
+#   owner       who is accountable — an alert with no owner is noise
+#   action      the recommended next step, shown verbatim in the dashboard
+
+settings:
+  # Robust z-scores use median/MAD so a single outlier market does not inflate
+  # the spread and hide the others.
+  z_scale: 1.4826
+  # Cross-market rules need enough peers for a median to mean anything.
+  min_peers: 5
+  # Time rules: recent window vs the window immediately before it.
+  recent_weeks: 2
+  baseline_weeks: 3
+  # A gap must be statistically AND practically significant to fire.
+  #
+  # Where a metric is tightly clustered across markets, the MAD is small and a
+  # trivial difference scores as a large z. Sentiment of 0.85 against a peer
+  # median of 0.86 is -2.1 SD and means nothing; firing on it teaches the team to
+  # ignore the feed. A candidate must therefore also differ from the peer median
+  # by at least this fraction. Rules can override it where the metric warrants.
+  min_relative_gap: 0.08
+
+rules:
+  # ---------------------------------------------------------------------
+  # Commercial efficiency — cross-market
+  # ---------------------------------------------------------------------
+  - id: EFF-01
+    name: Marketing efficiency below peer group
+    category: Commercial
+    scope: market_week
+    test: peer_zscore
+    metric: mer
+    direction: below
+    threshold: 2.0
+    severity: high
+    owner: Marketing Director
+    action: >-
+      Compare this market's channel mix against the peer median before changing
+      budget. A low MER with a normal mix is an execution problem; a low MER with
+      an unusual mix is an allocation problem, and they have different fixes.
+
+  - id: EFF-02
+    name: Cost per acquisition above peer group
+    category: Commercial
+    scope: market_week
+    test: peer_zscore
+    metric: cpa_aed
+    direction: above
+    threshold: 2.0
+    severity: high
+    owner: Performance Media Manager
+    action: >-
+      Check whether the gap is traffic cost or conversion quality. If impressions
+      and clicks are in line with peers but conversions are not, the problem is
+      after the click and adding media will not fix it.
+
+  - id: EFF-03
+    name: Portfolio sales declining
+    category: Commercial
+    scope: portfolio
+    test: group_movement
+    metric: sales_aed
+    direction: down
+    threshold: -0.08
+    severity: critical
+    owner: Marketing Director
+    # Every other rule on this page compares one market against its peers in
+    # the same week. That design is deliberate (see the module docstring) but
+    # it has one blind spot: a movement that hits every market at once looks
+    # like nothing, because nothing is unusual relative to peers who are
+    # moving the same way. This rule is the one exception -- it watches the
+    # GROUP total, not any single market -- because that blind spot is not
+    # theoretical here: total sales fell ~40% off their week-4 peak, and it
+    # produced zero extra peer-comparison alerts in the weeks it happened.
+    action: >-
+      Check whether spend fell in step with sales or sales fell faster than
+      spend -- the first is a controlled pullback, the second is a demand
+      problem. This is the only rule watching total portfolio volume rather
+      than any one market against its neighbours, so treat it as the headline
+      number, not a duplicate of the market-level alerts above.
+
+  # ---------------------------------------------------------------------
+  # Brand health — cross-market and movement
+  # ---------------------------------------------------------------------
+  - id: BR-01
+    name: Brand awareness below peer group
+    category: Brand health
+    scope: market_week
+    test: peer_zscore
+    metric: brand_awareness
+    direction: below
+    threshold: 2.0
+    severity: medium
+    owner: Head of Brand
+    action: >-
+      Read alongside share of voice before acting. Brand metrics here are an
+      indicative index averaged from row-level values, not a measured tracker, so
+      treat a single week as a prompt to investigate rather than as evidence.
+
+  - id: BR-02
+    name: Purchase intent falling
+    category: Brand health
+    scope: market_week
+    test: movement
+    metric: purchase_intent
+    direction: down
+    threshold: -0.08
+    severity: medium
+    owner: Head of Brand
+    action: >-
+      Check whether awareness moved with it. Intent falling while awareness holds
+      points to a proposition or pricing problem rather than a reach problem.
+
+  - id: SENT-01
+    name: Sentiment below peer group
+    category: Brand health
+    scope: market_week
+    test: peer_zscore
+    metric: sentiment
+    direction: below
+    threshold: 2.0
+    # Overrides the global 8% floor. Sentiment in this data lives in a tight
+    # band (~0.82-0.87 across all 64 market-weeks), so even the single most
+    # extreme deviation observed (-3.97 robust SD) is only a ~1.9% gap from
+    # the peer median -- the 8% default silently disables this rule outright.
+    # 1% still screens out pure noise; it just stops requiring a gap size
+    # that this metric's own scale can never produce.
+    min_relative_gap: 0.01
+    severity: critical
+    owner: Brand & PR Lead
+    action: >-
+      Identify the driving topic within 24h. Pause paid amplification on affected
+      creative until the cause is known — amplifying into negative sentiment turns
+      a complaint into a news cycle.
+
+  # ---------------------------------------------------------------------
+  # Competitive
+  # ---------------------------------------------------------------------
+  - id: SOV-01
+    name: Competitor share of voice ahead of Samsung
+    category: Competitive
+    scope: market_week
+    test: below_absolute
+    metric: sov_gap
+    threshold: 0.0
+    # below_absolute has no peer median to take a relative gap against, so
+    # this is the absolute-margin equivalent of peer_zscore's practical-
+    # significance floor: the competitor must be ahead by more than 2 points,
+    # not just technically ahead by a rounding error. Every OTHER rule on
+    # this page has some form of noise protection; this one had none until
+    # this was added, at critical severity -- the widest possible gap between
+    # how loud the alert is and how sure it is of itself.
+    min_gap: 2.0
+    severity: critical
+    owner: Head of Brand
+    action: >-
+      Identify which competitor and which topic. Campaign-driven gains decay;
+      product-launch gains do not. Bring forward planned PR and creator activity
+      rather than buying paid reach at a premium.
+
+  - id: SOV-02
+    name: Share of voice below peer group
+    category: Competitive
+    scope: market_week
+    test: peer_zscore
+    metric: share_of_voice
+    direction: below
+    threshold: 2.0
+    severity: medium
+    owner: Brand & PR Lead
+    action: >-
+      Review the earned media calendar for this market. A structural SOV deficit
+      against comparable subsidiaries usually reflects PR capacity, not spend.
+
+  # ---------------------------------------------------------------------
+  # Channel-level
+  # ---------------------------------------------------------------------
+  - id: CH-01
+    name: Channel below breakeven on gross margin
+    category: Channel performance
+    scope: channel
+    test: below_margin_breakeven
+    metric: roi_gross_margin
+    threshold: 1.0
+    severity: high
+    owner: Marketing Director
+    action: >-
+      The next dirham into this channel loses money at the assumed gross margin.
+      Cap spend and reallocate to a channel above breakeven, or renegotiate rates.
+      Confirm the margin assumption with Finance before acting on the number.
+
+  - id: CH-02
+    name: Large spend with no revenue attribution
+    category: Measurement
+    scope: channel
+    test: unmeasured_spend
+    threshold: 0.15
+    severity: critical
+    owner: Marketing Director
+    action: >-
+      A material share of budget sits in a channel this data cannot evaluate.
+      This is a measurement gap, not evidence of failure — commission incrementality
+      testing or a geo holdout before drawing any conclusion about its worth.
+
+  - id: CH-03
+    name: Channel cost-per-click far above other paid channels
+    category: Channel performance
+    scope: channel
+    test: cpc_outlier
+    threshold: 1.5
+    severity: medium
+    owner: Performance Media Manager
+    # Only Paid Social and Search report click data in this source (TV,
+    # Influencer, B2B Roadshow, Retail, PR and Website all show zero clicks),
+    # so a two-value "median" is not a comparison yet -- settings.min_channels
+    # (default 3) keeps this rule intentionally dormant on this data rather
+    # than firing on a meaningless pair. Same reasoning as SOV-01 having
+    # nothing to compare against right now; it activates the moment a third
+    # paid channel starts reporting clicks.
+    action: >-
+      Check landing page and audience targeting before assuming a bidding
+      problem. A CPC spike usually surfaces before the CPA spike it causes,
+      so this is the earlier of the two warnings.
+
+  # ---------------------------------------------------------------------
+  # Web
+  # ---------------------------------------------------------------------
+  - id: WEB-01
+    name: Website conversion rate below peer group
+    category: Performance
+    scope: market_week
+    test: peer_zscore
+    metric: web_conversion_rate
+    direction: below
+    threshold: 2.0
+    severity: medium
+    owner: E-commerce Manager
+    action: >-
+      Check for tracking breakage first — a conversion gap against otherwise
+      comparable markets is a broken tag more often than a broken funnel.
+
+  # ---------------------------------------------------------------------
+  # Influencer
+  # ---------------------------------------------------------------------
+  - id: INF-01
+    name: Influencer cost per acquisition far above roster
+    category: Influencer
+    scope: influencer
+    test: cpa_outlier
+    threshold: 1.5
+    severity: high
+    owner: Influencer Marketing Manager
+    action: >-
+      Renegotiate to a performance-weighted fee or exit at contract end. Retest at
+      a lower rate before renewing.
+
+  - id: INF-02
+    name: Weak engagement against the roster
+    category: Influencer
+    scope: influencer
+    test: engagement_below_roster
+    threshold: -0.25
+    severity: medium
+    owner: Influencer Marketing Manager
+    # Compares against the WHOLE roster's median, not a follower-tier peer
+    # group. A size-based comparison would be more precise (smaller accounts
+    # naturally run higher engagement), but this source's follower counts are
+    # too unstable per influencer to build a reliable tier -- see INF-03 and
+    # the comment in src/model.py's build_dims().
+    action: >-
+      Request platform-native analytics before the next flight. Engagement well
+      below the roster is the first indicator of audience quality problems.
+
+  - id: INF-03
+    name: Influencer follower count data unreliable
+    category: Measurement
+    scope: portfolio
+    test: follower_count_unreliable
+    threshold: 0.5
+    severity: medium
+    owner: Analytics Lead
+    # Replaces a prior rule ("roster lacks tier diversification") that turned
+    # out to be a data-quality artifact, not a real finding: it depended on a
+    # follower-tier classification built by taking the MAX of a value that
+    # swings by hundreds of thousands for the same influencer within a single
+    # week. Every aggregation tried (max, median, mean) collapsed the whole
+    # roster into one tier -- the tell that the field can't support tier
+    # classification at all, not that the roster is genuinely undiversified.
+    action: >-
+      Confirm the definition and collection method of follower count with the
+      data source before using it for tier classification or any size-based
+      influencer decision. Until then, evaluate the roster on cost per
+      acquisition, ROAS and engagement rate only.
+
+  - id: INF-04
+    name: Influencer engagement declining
+    category: Influencer
+    scope: influencer
+    test: engagement_declining
+    threshold: -0.08
+    severity: medium
+    owner: Influencer Marketing Manager
+    # INF-02 catches a creator that's LOW against the roster right now. It
+    # cannot catch a creator simply getting WORSE over time -- if the whole
+    # roster softens together, or if this account was never unusual but is
+    # still sliding. This is that trend check: the creator's own last-2-weeks
+    # average against its own prior 3 weeks.
+    action: >-
+      Confirm with platform-native analytics before assuming a content problem.
+      A real decline independent of the roster is the earliest indicator an
+      account's audience quality is degrading, regardless of how it compares
+      to the rest of the roster.

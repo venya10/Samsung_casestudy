@@ -1,0 +1,71 @@
+relationship 03fbd55b-e7c3-4c6a-b64d-7729f1b4db37
+	fromColumn: fact_market_week.week
+	toColumn: dim_week.week
+
+relationship 70ad7426-1066-4daa-b8fb-9836eb1e93e2
+	fromColumn: fact_market_week.market
+	toColumn: dim_market.market
+
+relationship b3a0165a-7d41-42fc-a72f-f7b144299066
+	fromColumn: fact_channel.week
+	toColumn: dim_week.week
+
+relationship 69bbca60-70c0-4c53-a095-68f9e56ab0b1
+	fromColumn: fact_channel.market
+	toColumn: dim_market.market
+
+relationship 07736bd0-10ed-4216-aee6-6f0bca3484c2
+	fromColumn: fact_channel.channel
+	toColumn: dim_channel.channel
+
+relationship 151b0481-647a-4864-99db-12cf4e8d7688
+	fromColumn: fact_product.week
+	toColumn: dim_week.week
+
+relationship 74d28e5c-1c2d-4ce3-839f-4d2c42b4ea23
+	fromColumn: fact_product.market
+	toColumn: dim_market.market
+
+relationship b9c2a845-148e-4291-83d0-dedcc62ec276
+	fromColumn: fact_product.product
+	toColumn: dim_product.product
+
+relationship d33f4e24-f580-413b-8df1-8eda71ac88b5
+	fromColumn: fact_influencer.week
+	toColumn: dim_week.week
+
+relationship 64cc87a5-c9f5-4e41-8ec3-70fabb24212d
+	fromColumn: fact_influencer.market
+	toColumn: dim_market.market
+
+relationship 8aaabab7-bede-498c-b394-45e3073ea1bc
+	fromColumn: fact_influencer.influencer
+	toColumn: dim_influencer.influencer
+
+relationship 5d4444ee-0dd2-44a8-ac7c-e9123c7834af
+	fromColumn: fact_brand.week
+	toColumn: dim_week.week
+
+relationship 7db6e9a6-db77-42f6-810e-409c5a84aa79
+	fromColumn: fact_brand.market
+	toColumn: dim_market.market
+
+relationship 3de56058-eefd-45df-9036-3f51e16cb44b
+	fromColumn: channel_efficiency.channel
+	toColumn: dim_channel.channel
+
+relationship d4dd51d6-265e-4817-9d33-1582959155dc
+	fromColumn: market_scorecard.market
+	toColumn: dim_market.market
+
+relationship d0031f26-17c5-419d-b409-1e13ffb654a7
+	fromColumn: product_summary.product
+	toColumn: dim_product.product
+
+relationship c7cbc66e-cbbb-4e06-b401-111a6a07c326
+	fromColumn: influencer_scorecard.influencer
+	toColumn: dim_influencer.influencer
+
+relationship b0ee2621-10fe-4e8b-9426-c27dba5714ea
+	fromColumn: reallocation.channel
+	toColumn: dim_channel.channel

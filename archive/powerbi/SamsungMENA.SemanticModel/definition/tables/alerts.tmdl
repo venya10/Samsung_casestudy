@@ -1,0 +1,78 @@
+table alerts
+
+	column week
+		dataType: double
+		summarizeBy: none
+		sourceColumn: week
+
+	column market
+		dataType: string
+		summarizeBy: none
+		sourceColumn: market
+
+	column entity
+		dataType: string
+		summarizeBy: none
+		sourceColumn: entity
+
+	column rule_id
+		dataType: string
+		summarizeBy: none
+		sourceColumn: rule_id
+
+	column rule
+		dataType: string
+		summarizeBy: none
+		sourceColumn: rule
+
+	column category
+		dataType: string
+		summarizeBy: none
+		sourceColumn: category
+
+	column severity
+		dataType: string
+		summarizeBy: none
+		sourceColumn: severity
+
+	column owner
+		dataType: string
+		summarizeBy: none
+		sourceColumn: owner
+
+	column metric
+		dataType: string
+		summarizeBy: none
+		sourceColumn: metric
+
+	column value
+		dataType: double
+		summarizeBy: sum
+		sourceColumn: value
+
+	column detail
+		dataType: string
+		summarizeBy: none
+		sourceColumn: detail
+
+	column action
+		dataType: string
+		summarizeBy: none
+		sourceColumn: action
+
+	column severity_rank
+		dataType: int64
+		summarizeBy: sum
+		sourceColumn: severity_rank
+
+	partition alerts = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents(DataFolder & "alerts.csv"),[Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+				    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+				    Typed = Table.TransformColumnTypes(Promoted, {{"week", type number}, {"market", type text}, {"entity", type text}, {"rule_id", type text}, {"rule", type text}, {"category", type text}, {"severity", type text}, {"owner", type text}, {"metric", type text}, {"value", type number}, {"detail", type text}, {"action", type text}, {"severity_rank", Int64.Type}})
+				in
+				    Typed
+
+	annotation PBI_ResultType = Table
