@@ -9,6 +9,7 @@ so a figure can never be mistaken for USD.
 """
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 # --------------------------------------------------------------------------
@@ -132,3 +133,23 @@ def market_label(code: str) -> str:
     """'SGE (Gulf)' when we have a working label, else the bare code."""
     name = MARKET_LABEL.get(code)
     return f"{code} ({name})" if name else code
+
+
+def _fmt_export_number(v) -> str:
+    """Comma-thousands, capped at 2 decimal places -- the exact rule
+    assets/app.js's fmt() applies on screen, mirrored here so a downloaded
+    file reads the same as what was displayed, not the raw float repr."""
+    if v is None or (isinstance(v, float) and math.isnan(v)):
+        return ""
+    return f"{v:,.0f}" if float(v).is_integer() else f"{v:,.2f}"
+
+
+def format_export_df(df):
+    """Copy of df with every numeric (non-bool) column rendered as a clean,
+    comma-thousands string -- for CSV downloads, where there is no such thing
+    as a cell number format, only literal text. Used by model.py and
+    build_insights.py before writing the Data page's per-table CSVs."""
+    out = df.copy()
+    for col in out.select_dtypes(include="number").columns:
+        out[col] = out[col].map(_fmt_export_number)
+    return out

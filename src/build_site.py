@@ -1686,13 +1686,30 @@ def build() -> None:
     # One workbook, every fact table as its own sheet under its business
     # name -- reads straight from the parquet (not the DATA_PBI CSVs above),
     # so it can never go stale against whatever the CSV export list includes.
+    # Numbers keep their real numeric type (so Excel can still sum/sort them)
+    # but get a comma-thousands cell format -- integer-valued cells with none
+    # of the decimals, everything else at 2 -- matching the same per-value
+    # rule the Data page's on-screen table and its CSV downloads both use.
+    from openpyxl.utils import get_column_letter
+
     xlsx_path = out_data / "samsung_mena_all_tables.xlsx"
     with pd.ExcelWriter(xlsx_path, engine="openpyxl") as writer:
         for name, label, _ in FACT_TABLES:
             try:
-                load(name).to_excel(writer, sheet_name=label, index=False)
+                df = load(name)
             except FileNotFoundError:
                 continue
+            df.to_excel(writer, sheet_name=label, index=False)
+            ws = writer.sheets[label]
+            for i, col in enumerate(df.columns, start=1):
+                if not pd.api.types.is_numeric_dtype(df[col]) or df[col].dtype == bool:
+                    continue
+                col_letter = get_column_letter(i)
+                for row_i, value in enumerate(df[col], start=2):
+                    if pd.isna(value):
+                        continue
+                    ws[f"{col_letter}{row_i}"].number_format = (
+                        "#,##0" if float(value).is_integer() else "#,##0.00")
 
     builders = {
         "index.html": ("Overview", page_overview),

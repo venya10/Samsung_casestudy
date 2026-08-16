@@ -10,7 +10,7 @@ from __future__ import annotations
 import duckdb
 import pandas as pd
 
-from common import DATA_PBI, DATA_PROCESSED, DUCKDB_PATH
+from common import DATA_PBI, DATA_PROCESSED, DUCKDB_PATH, format_export_df
 from insights import (
     channel_efficiency,
     influencer_scorecard,
@@ -56,7 +56,7 @@ def main() -> None:
     for name in ["channel_efficiency", "market_scorecard", "product_channel",
                  "product_summary", "influencer_scorecard", "reallocation",
                  "paid_vs_earned", "panel_model", "metric_correlations"]:
-        outputs[name].to_csv(DATA_PBI / f"{name}.csv", index=False)
+        format_export_df(outputs[name]).to_csv(DATA_PBI / f"{name}.csv", index=False)
 
     print(f"Persisted {len(outputs)} insight tables -> {DATA_PROCESSED}")
     for name, df in outputs.items():

@@ -30,6 +30,7 @@ from common import (
     MEDIA_TYPE,
     NO_REVENUE_ATTRIBUTION,
     N_WEEKS,
+    format_export_df,
 )
 from ingest import DQ, load
 
@@ -301,7 +302,7 @@ def persist(tables: dict[str, pd.DataFrame]) -> None:
     for name in ["fact_base", "fact_market_week", "fact_channel", "fact_product",
                  "fact_influencer", "fact_brand", "dim_week", "dim_market",
                  "dim_channel", "dim_product", "dim_influencer"]:
-        tables[name].to_csv(DATA_PBI / f"{name}.csv", index=False)
+        format_export_df(tables[name]).to_csv(DATA_PBI / f"{name}.csv", index=False)
 
 
 def main() -> None:
