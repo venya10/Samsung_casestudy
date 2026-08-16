@@ -411,7 +411,13 @@
         }
         setNote('Rebuilt from ' + res.body.rows.toLocaleString() + ' rows across ' +
           res.body.weeks.length + ' week(s). Reloading…');
-        setTimeout(function () { window.location.reload(); }, 1200);
+        // Cache-busting query param, not a plain reload() -- belt and
+        // suspenders alongside the server's Cache-Control: no-cache header,
+        // in case anything between here and the server still has an old
+        // copy of this page from before the rebuild.
+        setTimeout(function () {
+          window.location.href = window.location.pathname + '?rebuilt=' + Date.now();
+        }, 1200);
       })
       .catch(function (err) {
         setNote("Couldn't reach the server: " + err.message, 'fbar-error');

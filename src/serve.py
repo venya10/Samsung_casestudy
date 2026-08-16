@@ -159,6 +159,19 @@ def md_to_html(md: str) -> str:
 # Handler
 # --------------------------------------------------------------------------
 class Handler(SimpleHTTPRequestHandler):
+    def end_headers(self):
+        # SimpleHTTPRequestHandler sends no Cache-Control by default, so a
+        # browser is free to apply its own heuristic caching to every page,
+        # script and stylesheet -- fine for a truly static site, wrong for
+        # this one, since a dataset upload rebuilds site/*.html on disk and a
+        # plain reload needs to actually see the new files. no-cache (not
+        # no-store) forces revalidation on every request rather than skipping
+        # the network entirely -- Python's http.server already answers a
+        # conditional GET with 304 when a file's mtime hasn't changed, so
+        # unchanged assets still avoid a real re-download.
+        self.send_header("Cache-Control", "no-cache, must-revalidate")
+        super().end_headers()
+
     def _json(self, payload: dict, status: int = 200) -> None:
         blob = json.dumps(payload).encode("utf-8")
         self.send_response(status)
