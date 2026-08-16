@@ -18,6 +18,7 @@ to the prepared answers baked into the HTML, saying so on screen.
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 import webbrowser
@@ -33,7 +34,10 @@ import site_data  # noqa: E402
 from common import ROOT  # noqa: E402
 
 SITE = ROOT / "site"
-PORT = 8000
+# A host like Render sets $PORT itself and expects the process to bind 0.0.0.0;
+# locally (no $PORT set) this falls back to the same 127.0.0.1:8000 as before.
+PORT = int(os.environ.get("PORT", 8000))
+HOST = "0.0.0.0" if "PORT" in os.environ else "127.0.0.1"
 
 # Tables the filter API sends to the client. GLOBAL_ONLY ones are always the
 # full, unfiltered table -- see site_data.py for why (panel_model, market peer
@@ -251,17 +255,18 @@ def main() -> None:
 
     live = assistant.has_api_key()
     handler = partial(Handler, directory=str(SITE))
-    server = ThreadingHTTPServer(("127.0.0.1", PORT), handler)
+    server = ThreadingHTTPServer((HOST, PORT), handler)
 
     print(f"\n  Samsung MENA Marketing Intelligence")
     print(f"  http://localhost:{PORT}\n")
     print(f"  AI assistant : {'LIVE (' + assistant.MODEL + ')' if live else 'offline — no GEMINI_API_KEY, using prepared answers'}")
     print("  Ctrl-C to stop\n")
 
-    try:
-        webbrowser.open(f"http://localhost:{PORT}")
-    except Exception:
-        pass
+    if HOST == "127.0.0.1":  # local run only -- a cloud host has no browser to open
+        try:
+            webbrowser.open(f"http://localhost:{PORT}")
+        except Exception:
+            pass
     try:
         server.serve_forever()
     except KeyboardInterrupt:
