@@ -89,8 +89,8 @@ window.Filters = (function () {
         (checked ? ' checked' : '') + '>' + esc(fmtVal(dim, v)) + '</label>';
     }).join('');
     return '<div class="fmenu" data-menu="' + dim + '">' +
-      '<div class="fmenu-head"><button type="button" data-act="all" data-dim="' + dim + '">Select all</button>' +
-      '<button type="button" data-act="clear" data-dim="' + dim + '">Clear</button></div>' + boxes + '</div>';
+      '<div class="fmenu-head"><button type="button" data-act="all" data-dim="' + dim + '">Select all</button></div>' +
+      boxes + '</div>';
   }
 
   function pillLabel(dim) {
@@ -141,8 +141,8 @@ window.Filters = (function () {
     });
     mount.querySelectorAll('.fmenu-head button').forEach(function (b) {
       b.addEventListener('click', function () {
-        // "Select all" and "Clear" both converge on [] ("no filter") -- see the
-        // checkbox handler above for why an empty selection can't mean anything else.
+        // Converges on [] ("no filter") -- see the checkbox handler above for
+        // why an empty selection can't mean anything else.
         STATE[b.getAttribute('data-dim')] = [];
         refresh(pageId, mount);
       });
