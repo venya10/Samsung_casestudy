@@ -1391,24 +1391,29 @@ def page_data(d: dict) -> str:
              "with only its own measures populated. Nothing was imputed."),
     ]
 
-    # --- replace the dataset -----------------------------------------------
+    # --- add to the dataset -------------------------------------------------
     # Live-only, passcode-gated (see src/serve.py) -- a public deploy can't
     # have this button usable by anyone with the URL. Requires a .csv/.xlsx
-    # with the exact same headers as the original extract; src/data_upload.py
-    # validates, swaps it in, and re-runs the full pipeline, rolling back
-    # automatically if anything fails so a bad file can never break the live
-    # site.
+    # with the exact same headers as the original extract. src/data_upload.py
+    # validates the headers, archives the current source with a timestamp,
+    # MERGES the upload into it (new (week, market, channel, product) rows
+    # are added; rows whose key already exists are treated as duplicates and
+    # dropped), then re-runs the full pipeline on the merged result, rolling
+    # back automatically if anything fails so a bad file can never break the
+    # live site.
     body.append(
         '<div id="mount-upload" class="card" style="margin-top:22px">'
-        '<div class="card-head"><h3>Replace the dataset</h3>'
+        '<div class="card-head"><h3>Add to the dataset</h3>'
         '<div class="card-sub">Upload a .csv or .xlsx with the same headers as '
-        "the original extract to rebuild the entire dashboard from it. "
-        "Requires <code>python src/serve.py</code> and the server's upload "
-        "passcode.</div></div>"
+        "the original extract. New (week, market, channel, product) rows are "
+        "merged in; rows that already exist are skipped as duplicates. The "
+        "current source is archived with a timestamp first. Requires "
+        "<code>python src/serve.py</code> and the server's upload passcode."
+        "</div></div>"
         '<div class="sens-row">'
         '<input type="password" id="upload-passcode" placeholder="Upload passcode" autocomplete="off">'
         '<input type="file" id="upload-file" accept=".csv,.xlsx,.xls">'
-        '<button type="button" id="upload-btn" class="btn-dl">↑ Upload &amp; rebuild</button>'
+        '<button type="button" id="upload-btn" class="btn-dl">↑ Upload &amp; merge</button>'
         "</div>"
         '<div class="fbar-note" id="upload-note"></div>'
         "</div>"

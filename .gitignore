@@ -16,3 +16,7 @@ Thumbs.db
 # Uncomment to keep the repo lean; left tracked here so a reviewer can open the
 # dashboard without running anything first.
 # data/processed/
+
+# Timestamped pre-merge backups from the Data page's upload feature
+# (src/data_upload.py) -- operational history, not a tracked deliverable.
+data/raw/archive/

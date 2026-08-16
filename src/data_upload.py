@@ -1,25 +1,36 @@
-"""Handles the Data page's "Replace the dataset" upload.
+"""Handles the Data page's "Add dataset" upload.
 
 Validates an uploaded .csv/.xlsx against the exact header set the pipeline was
-built for, swaps it in for data/raw/samsung_marketing_full_dataset.csv, and
-re-runs the pipeline end to end (same steps as run_all.py). Everything the
-pipeline touches -- the source file, data/processed/, site/ -- is snapshotted
-first and restored automatically if any step fails, so a bad or malformed
-upload can never leave the live site in a broken state.
+built for, archives the current source file with a timestamp, MERGES the
+upload into it (new (week, market, channel, product) combinations are added;
+rows whose key already exists are treated as duplicates and dropped, keeping
+the existing row), then re-runs the pipeline end to end on the merged result
+(same steps as run_all.py). Everything the pipeline touches -- the source
+file, data/processed/, site/ -- is snapshotted first and restored
+automatically if any step fails, so a bad or malformed upload can never leave
+the live site in a broken state.
 """
 from __future__ import annotations
 
 import io
 import shutil
 import tempfile
+from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
 
 import ingest
-from common import DATA_PROCESSED, SITE, SOURCE_FILE
+from common import DATA_PROCESSED, DATA_RAW, SITE, SOURCE_FILE
 
 MAX_BYTES = 25 * 1024 * 1024  # this dataset is a few MB; plenty of headroom
+ARCHIVE_DIR = DATA_RAW / "archive"
+
+# Raw (pre-rename) header names for ingest.KEY -- the same (week, market,
+# channel, product) grain every dedup elsewhere in this pipeline already uses
+# (see ingest.clean()'s own duplicate-key handling), derived from RENAME
+# rather than hand-listed a second time so the two can't drift apart.
+RAW_KEY = [raw for raw, clean in ingest.RENAME.items() if clean in ingest.KEY]
 
 
 class UploadRejected(ValueError):
@@ -57,14 +68,34 @@ def _parse(body: bytes, filename: str) -> pd.DataFrame:
     return df
 
 
+def _merge(old: pd.DataFrame, new: pd.DataFrame) -> tuple[pd.DataFrame, int, int]:
+    """Old rows first, then new -- drop_duplicates(keep='first') on the
+    (week, market, channel, product) key therefore keeps the EXISTING row on
+    any collision and only ever adds rows whose key is genuinely new. Returns
+    (merged, rows_added, duplicates_ignored)."""
+    combined = pd.concat([old, new], ignore_index=True)
+    merged = combined.drop_duplicates(subset=RAW_KEY, keep="first").reset_index(drop=True)
+    added = len(merged) - len(old)
+    ignored = len(new) - added
+    return merged, added, ignored
+
+
 def apply_upload(body: bytes, filename: str) -> dict:
-    """Validate, swap in, and rebuild. Raises UploadRejected (safe to show the
-    user verbatim) on any failure; the previous working dataset is always
-    left intact on disk when this raises."""
+    """Validate, archive the current source, merge the upload into it, and
+    rebuild. Raises UploadRejected (safe to show the user verbatim) on any
+    failure; the previous working dataset is always left intact on disk when
+    this raises."""
     if len(body) > MAX_BYTES:
         raise UploadRejected(f"File too large ({len(body) / 1e6:.1f}MB) -- 25MB limit.")
 
-    df = _parse(body, filename)  # validated before any file on disk is touched
+    new_df = _parse(body, filename)  # validated before any file on disk is touched
+    old_df = pd.read_csv(SOURCE_FILE)
+    merged_df, rows_added, duplicates_ignored = _merge(old_df, new_df)
+
+    ARCHIVE_DIR.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    archive_name = f"{SOURCE_FILE.stem}_{stamp}{SOURCE_FILE.suffix}"
+    shutil.copy2(SOURCE_FILE, ARCHIVE_DIR / archive_name)
 
     with tempfile.TemporaryDirectory() as tmp:
         backup = Path(tmp)
@@ -80,7 +111,7 @@ def apply_upload(body: bytes, filename: str) -> dict:
             shutil.copytree(backup / "site", SITE)
 
         try:
-            df.to_csv(SOURCE_FILE, index=False)
+            merged_df.to_csv(SOURCE_FILE, index=False)
 
             import alerts
             import build_insights
@@ -110,10 +141,18 @@ def apply_upload(body: bytes, filename: str) -> dict:
             _restore()
             raise UploadRejected(
                 "The file matched the expected headers, but the pipeline failed "
-                f"while rebuilding from it ({type(exc).__name__}: {exc}). The "
-                "previous dataset has been restored -- nothing on the live site "
-                "changed."
+                f"while rebuilding the merged dataset ({type(exc).__name__}: {exc}). "
+                "The previous dataset has been restored -- nothing on the live "
+                "site changed. (The pre-merge source was still archived to "
+                f"data/raw/archive/{archive_name}.)"
             ) from exc
 
-    weeks = sorted(int(w) for w in pd.to_numeric(df["Week"], errors="coerce").dropna().unique())
-    return {"rows": len(df), "columns": len(df.columns), "weeks": weeks}
+    weeks = sorted(int(w) for w in pd.to_numeric(merged_df["Week"], errors="coerce").dropna().unique())
+    return {
+        "rows": len(merged_df),
+        "columns": len(merged_df.columns),
+        "weeks": weeks,
+        "rows_added": rows_added,
+        "duplicates_ignored": duplicates_ignored,
+        "archived_as": archive_name,
+    }

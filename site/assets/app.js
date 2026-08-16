@@ -409,8 +409,10 @@
           btn.disabled = false;
           return;
         }
-        setNote('Rebuilt from ' + res.body.rows.toLocaleString() + ' rows across ' +
-          res.body.weeks.length + ' week(s). Reloading…');
+        setNote('Merged ' + res.body.rows_added.toLocaleString() + ' new row(s), skipped ' +
+          res.body.duplicates_ignored.toLocaleString() + ' duplicate(s) -- ' +
+          res.body.rows.toLocaleString() + ' rows total across ' + res.body.weeks.length +
+          ' week(s). Previous source archived as ' + res.body.archived_as + '. Reloading…');
         // Cache-busting query param, not a plain reload() -- belt and
         // suspenders alongside the server's Cache-Control: no-cache header,
         // in case anything between here and the server still has an old
