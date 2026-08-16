@@ -11,8 +11,10 @@ server exists solely to add the API routes the interactive pages call:
     POST /api/tables       ->  the live filter bar's recomputed tables
     POST /api/alerts       ->  {"alerts": [...], "alerts_current": [...]} at a
                                 custom sensitivity -- the Early Warning page's slider
-    POST /api/upload-data  ->  replace the dataset and rebuild everything --
+    POST /api/upload-data  ->  merge new data into the dataset and rebuild --
                                 the Data page's upload button, passcode-gated
+    GET  /api/archives     ->  list of pre-merge backups, newest first
+    GET  /api/archives/<name> -> download one archived file
 
 If no API key is set the health route reports live=false and the page falls back
 to the prepared answers baked into the HTML, saying so on screen.
@@ -22,12 +24,14 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import sys
 import threading
 import webbrowser
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import unquote
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -181,11 +185,40 @@ class Handler(SimpleHTTPRequestHandler):
         self.wfile.write(blob)
 
     def do_GET(self):  # noqa: N802
-        if self.path.split("?")[0] == "/api/health":
+        path = self.path.split("?")[0]
+        if path == "/api/health":
             self._json({"live": assistant.has_api_key(), "model": assistant.MODEL,
                         "upload_enabled": bool(UPLOAD_PASSCODE)})
             return
+        if path == "/api/archives":
+            self._handle_archives_list()
+            return
+        if path.startswith("/api/archives/"):
+            self._handle_archive_download(path[len("/api/archives/"):])
+            return
         super().do_GET()
+
+    def _handle_archives_list(self) -> None:
+        try:
+            self._json({"archives": data_upload.list_archives()})
+        except Exception as exc:
+            self._json({"error": str(exc)}, 500)
+
+    def _handle_archive_download(self, name: str) -> None:
+        # No passcode here -- see data_upload.list_archives()'s docstring:
+        # the current dataset is already public on this dashboard, so a past
+        # version of it isn't a new sensitivity to gate.
+        path = data_upload.resolve_archive(unquote(name))
+        if path is None:
+            self.send_error(404)
+            return
+        self.send_response(200)
+        self.send_header("Content-Type", "text/csv")
+        self.send_header("Content-Disposition", f'attachment; filename="{path.name}"')
+        self.send_header("Content-Length", str(path.stat().st_size))
+        self.end_headers()
+        with open(path, "rb") as f:
+            shutil.copyfileobj(f, self.wfile)
 
     def do_POST(self):  # noqa: N802
         path = self.path.split("?")[0]

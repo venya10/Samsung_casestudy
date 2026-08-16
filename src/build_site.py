@@ -1416,6 +1416,20 @@ def page_data(d: dict) -> str:
         "</div>"
     )
 
+    # --- archived versions ---------------------------------------------------
+    # Read-only, no passcode needed (see src/data_upload.py's list_archives()
+    # docstring for why) -- a live-only list of the timestamped backups the
+    # upload above creates before every merge.
+    body.append(
+        '<div id="mount-archives" class="card" style="margin-top:22px">'
+        '<div class="card-head"><h3>Archived versions</h3>'
+        '<div class="card-sub">A timestamped copy of the source is saved here '
+        "before every merge above.</div></div>"
+        '<div id="archives-list" class="fbar-note">Run <code>python src/serve.py</code> '
+        "to see archived versions.</div>"
+        "</div>"
+    )
+
     # --- the data: tabs + download, first and up top ---------------------
     # Only the 6 fact tables -- the cleaned data itself. Business names
     # (Master Table, Channels, ...), not the internal fact_ prefix. Columns

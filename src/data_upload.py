@@ -68,6 +68,42 @@ def _parse(body: bytes, filename: str) -> pd.DataFrame:
     return df
 
 
+def list_archives() -> list[dict]:
+    """Every pre-merge backup, newest first -- for the Data page's read-only
+    'Archived versions' list. No passcode needed to view/download these: the
+    current dataset is already fully public on this dashboard, so a past
+    version of the same data isn't more sensitive."""
+    if not ARCHIVE_DIR.exists():
+        return []
+    out = []
+    for p in sorted(ARCHIVE_DIR.glob("*.csv"), key=lambda p: p.stat().st_mtime, reverse=True):
+        try:
+            weeks = sorted(int(w) for w in
+                            pd.read_csv(p, usecols=["Week"])["Week"].dropna().unique())
+            rows = sum(1 for _ in open(p, encoding="utf-8")) - 1  # cheap row count, header excluded
+        except Exception:
+            weeks, rows = [], None
+        out.append({
+            "name": p.name,
+            "size_bytes": p.stat().st_size,
+            "modified": datetime.fromtimestamp(p.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
+            "rows": rows,
+            "weeks": weeks,
+        })
+    return out
+
+
+def resolve_archive(name: str) -> Path | None:
+    """Path-traversal-safe lookup for the download route -- only a filename
+    that actually resolves to inside ARCHIVE_DIR is ever returned."""
+    candidate = (ARCHIVE_DIR / name).resolve()
+    try:
+        candidate.relative_to(ARCHIVE_DIR.resolve())
+    except ValueError:
+        return None
+    return candidate if candidate.is_file() else None
+
+
 def _merge(old: pd.DataFrame, new: pd.DataFrame) -> tuple[pd.DataFrame, int, int]:
     """Old rows first, then new -- drop_duplicates(keep='first') on the
     (week, market, channel, product) key therefore keeps the EXISTING row on

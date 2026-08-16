@@ -426,4 +426,35 @@
         btn.disabled = false;
       });
   });
+
+  /* ----------------------------------------------------- archived versions */
+  // Read-only, no passcode -- see src/data_upload.py's list_archives().
+  var archivesHost = document.getElementById('archives-list');
+  function esc(s) { return String(s).replace(/</g, '&lt;'); }
+  if (archivesHost) {
+    fetch('/api/archives').then(function (r) {
+      if (!r.ok) throw new Error('unreachable');
+      return r.json();
+    }).then(function (j) {
+      var items = j.archives || [];
+      if (!items.length) {
+        archivesHost.className = 'fbar-note';
+        archivesHost.textContent = 'No archived versions yet -- one is created before every merge above.';
+        return;
+      }
+      archivesHost.className = '';
+      archivesHost.innerHTML = '<table><thead><tr><th>Archived</th><th>Rows</th><th>Weeks</th><th></th></tr></thead><tbody>' +
+        items.map(function (a) {
+          return '<tr><td>' + esc(a.modified) + '</td>' +
+            '<td>' + (a.rows != null ? a.rows.toLocaleString() : '—') + '</td>' +
+            '<td>' + (a.weeks && a.weeks.length ? a.weeks.length : '—') + '</td>' +
+            '<td><a class="btn-dl" style="padding:5px 10px;font-size:11.5px" ' +
+            'href="/api/archives/' + encodeURIComponent(a.name) + '" download>↓</a></td></tr>';
+        }).join('') + '</tbody></table>';
+    }).catch(function () {
+      archivesHost.className = 'fbar-note';
+      archivesHost.innerHTML = '<span class="fbar-offline">Offline — run <code>python src/serve.py</code> ' +
+        'to see archived versions.</span>';
+    });
+  }
 })();
