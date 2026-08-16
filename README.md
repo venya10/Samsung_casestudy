@@ -161,33 +161,8 @@ suite; it's this structural check against the built site.
 ├── notebooks/01_eda.ipynb  Part 1 working
 ├── outputs/                executive summary
 ├── prompts/                system prompt + AI workflow write-up
-├── src/                    the pipeline and the dashboard generator
-└── archive/                superseded work: the synthetic pipeline built before the
-                            data arrived, two retired Streamlit dashboards, and the
-                            retired Power BI model
+└── src/                    the pipeline and the dashboard generator
 ```
-
-### About `archive/`
-
-The pipeline was built and validated against a synthetic dataset before this extract
-arrived, including a full marketing mix model with adstock and saturation, and a
-ground-truth test asserting that seven deliberately planted signals survived
-cleaning. Both are kept — they are the answer to *"what would you do with two years
-of history?"*, and they document why the MMM was dropped rather than never attempted.
-
-`archive/streamlit-app/` is an earlier Streamlit build made for a different,
-synthetic schema (52 weeks, 3 markets, USD) before this real extract arrived. It
-predates cross-filtering.
-
-`archive/streamlit-app-2/` was the second Streamlit dashboard, built for the real
-extract with Power BI-style click-to-cross-filter. It was retired once the static
-site reached the same cross-filtering capability without a Python process, a
-charting library, or a web framework — see [`archive/README.md`](archive/README.md)
-to run it anyway.
-
-`archive/powerbi/` is the retired Power BI project — a star-schema PBIP/TMDL model
-with 40 DAX measures, built by `build_powerbi.py`. Kept as evidence of the approach;
-not maintained alongside the current pipeline.
 
 ---
 
